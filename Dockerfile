@@ -12,6 +12,4 @@ RUN cd /app && bundle install --quiet --local --jobs 4 || bundle check
 
 ADD . /app
 
-#EXPOSE 4242
-#CMD bundle exec rackup --port 4242 --host 0.0.0.0
 CMD bundle exec bin/secrets
