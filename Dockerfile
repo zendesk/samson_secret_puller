@@ -10,6 +10,4 @@ ADD bin /app/bin
 
 RUN cd /app && bundle install --quiet --local --jobs 4 || bundle check
 
-ADD . /app
-
 CMD bundle exec bin/secrets
