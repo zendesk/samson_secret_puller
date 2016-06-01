@@ -75,8 +75,11 @@ class SecretsClient
 
   # TODO: make sure that there's enough error handling around this.
   def read(key)
+    key_segments = key.split('/', 4)
+    final_key = convert_path(key_segments.delete_at(3), :encode)
+    key = key_segments.join('/') + '/' + final_key
     result = Vault.logical.read(vault_path(key))
-    false if result.nil?
+    false unless result.respond_to?(:data)
     result = result.to_h
     result = result.merge(result.delete(:data))
     result.delete(:vault)
