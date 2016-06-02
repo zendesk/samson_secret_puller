@@ -61,26 +61,33 @@ class SecretsClient
     secret.each do |name, path|
       contents = read(path)
         if contents
-          File.open(@output_path + name.to_s, 'w+') { |f| f.puts contents }
+          File.open(@output_path + name.to_s.chomp, 'w+') { |f| f.write contents }
+          STDOUT.puts "Writing #{name.to_s} with contents from secret key #{path}"
         end
       end
     end
-  end
-
-  def self.vault_client
-    Vault
+    # after we are done with the list of screts, write to a file to make sure
+    # the primary container knows about it
+    File.open(@output_path + '.done', 'w+') { |f| f.write Time.now.to_s }
   end
 
   private
 
-  # TODO: make sure that there's enough error handling around this.
   def read(key)
     key_segments = key.split('/', 4)
     final_key = convert_path(key_segments.delete_at(3), :encode)
     key = key_segments.join('/') + '/' + final_key
     result = Vault.logical.read(vault_path(key))
-    false unless result.respond_to?(:data)
+    unless result.respond_to?(:data)
+      raise "Bad results returned from vault server #{result.inspect}"
+    end
+    if result.data.nil?
+      raise "vault response contains no payload"
+    end
     result = result.to_h
+    unless result.respond_to?(:merge)
+      raise "converting vault respones to hash failed #{result.inspect}"
+    end
     result = result.merge(result.delete(:data))
     result.delete(:vault)
   end
@@ -101,4 +108,3 @@ class SecretsClient
     string
   end
 end
-

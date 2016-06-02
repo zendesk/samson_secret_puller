@@ -55,6 +55,7 @@ LYHB2Fw/YG29RN44NR6P9IWhsRRRPfChGp9rwMq3nPu2alSOGsrsYw5YN27tZ4CF
 -----END CERTIFICATE-----
 ENDPEM
 ANNOTATION = "secret/this/is/my/SECRET"
+BAD_ANNOTATION = "secret/this/is/my/SECRET\n"
 
 describe SecretsClient do
 
@@ -62,13 +63,24 @@ describe SecretsClient do
   before do
     #create a tmp pem file
     File.open('/tmp/vaultpem', 'w') { |f| f.write PEMFILE }
-    File.open('/tmp/annotations', 'w') { |f| f.puts ANNOTATION.chomp }
+    File.open('/tmp/annotations', 'w') { |f| f.write ANNOTATION }
+    File.open('/tmp/bad_annotations', 'w') { |f| f.write BAD_ANNOTATION }
+    File.open('/tmp/fail_annotations', 'w') { |f| f.write "secret/this/is/my/SECRETFAIL" }
     auth_body = {auth: {client_token: 'sometoken'}}
     stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").
       to_return(body: auth_body.to_json)
     query_body = {data:{vault:'foo'}}
-    stub_request(:get, "https://foo.bar:8200/v1/secret%2Fsecret%2Fthis%2Fis%2Fmy%2FSECRET").
+    stub_request(:get, 'https://foo.bar:8200/v1/secret%2Fsecret%2Fthis%2Fis%2Fmy%252FSECRET').
       to_return(body: query_body.to_json, headers: {'Content-Type': 'application/json'})
+    bad_body = {foo:{bar:'fail'}}
+    stub_request(:get, 'https://foo.bar:8200/v1/secret%2Fsecret%2Fthis%2Fis%2Fmy%252FSECRETFAIL').
+      to_return(body: bad_body.to_json, headers: {'Content-Type': 'application/json'})
+  end
+
+  after do
+    File.delete('/tmp/vaultpem')
+    File.delete('/tmp/annotations')
+    File.delete('/tmp/bad_annotations')
   end
 
   describe "fails to initialize" do
@@ -92,12 +104,26 @@ describe SecretsClient do
     it '.process' do
       client =  SecretsClient.new('https://foo.bar:8200', '/tmp/vaultpem', false, '/tmp/annotations', '/tmp/')
       client.process
-      File.read('/tmp/SECRET').chomp.must_equal("foo")
+      File.read('/tmp/SECRET').must_equal("foo")
     end
-  end
 
-  after do
-    File.delete('/tmp/vaultpem')
-    File.delete('/tmp/annotations')
+    it 'succeedes when secret has newline in key name' do
+      client =  SecretsClient.new('https://foo.bar:8200', '/tmp/vaultpem', false, '/tmp/bad_annotations', '/tmp/')
+      client.process
+      File.read('/tmp/SECRET').must_equal("foo")
+    end
+
+    it 'does not leave an RS in written secret' do
+      client =  SecretsClient.new('https://foo.bar:8200', '/tmp/vaultpem', false, '/tmp/bad_annotations', '/tmp/')
+      client.process
+      refute_match(/.*\n/, File.read('/tmp/SECRET'))
+    end
+
+    it "raises when response is invalid" do
+      client =  SecretsClient.new('https://foo.bar:8200', '/tmp/vaultpem', false, '/tmp/fail_annotations', '/tmp/')
+      assert_raises(RuntimeError) do
+        client.process.must_raise
+      end
+    end
   end
 end
