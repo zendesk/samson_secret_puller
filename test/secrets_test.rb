@@ -56,11 +56,13 @@ LYHB2Fw/YG29RN44NR6P9IWhsRRRPfChGp9rwMq3nPu2alSOGsrsYw5YN27tZ4CF
 ENDPEM
 ANNOTATION = "secret/this/is/my/SECRET"
 BAD_ANNOTATION = "secret/this/is/my/SECRET\n"
+ENV['NOLOG'] = 'true'
 
 describe SecretsClient do
 
   let(:client) { SecretsClient.send(:vault_client).logical }
   before do
+    # disalbe logging for tests
     #create a tmp pem file
     File.open('/tmp/vaultpem', 'w') { |f| f.write PEMFILE }
     File.open('/tmp/annotations', 'w') { |f| f.write ANNOTATION }
@@ -83,13 +85,26 @@ describe SecretsClient do
     File.delete('/tmp/bad_annotations')
   end
 
-  describe "fails to initialize" do
-    it ".missing pem" do
+  describe "vault authentication" do
+    before do
+      stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").to_return(status: 403)
+    end
+
+    it "fails" do
+      assert_raises RuntimeError do
+        SecretsClient.new('https://foo.bar:8200', '/tmp/vaultpem', false, '/tmp/annotations')
+      end
+    end
+  end
+
+  describe "invalid client" do
+    it "missing pem" do
       assert_raises RuntimeError do
         SecretsClient.new('https://foo.bar:8200', '/tmp/foopy', false, '/tmp/annotations')
       end
     end
-    it ".missing annotations" do
+
+    it "missing annotations" do
       assert_raises RuntimeError do
         SecretsClient.new('https://foo.bar:8200', '/tmp/vaultpem', false, '/tmp/missing')
       end
