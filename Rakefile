@@ -1,7 +1,8 @@
-task default: %w[test]
+require 'bundler/setup'
 
+task default: :test
 
-desc "Tests"
+desc "Test"
 task :test do
-  bundle exec "mtest test/secrets_test.rb"
+  sh "mtest test/"
 end

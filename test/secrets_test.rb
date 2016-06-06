@@ -1,7 +1,7 @@
-#!/usr/bin/env ruby
-
+require 'bundler/setup'
 require 'maxitest/autorun'
 require 'webmock/minitest'
+
 require_relative "../lib/secrets.rb"
 
 PEMFILE =<<ENDPEM
