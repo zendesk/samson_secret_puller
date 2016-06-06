@@ -1,22 +1,22 @@
 require 'vault'
 
 class SecretsClient
-
   ENCODINGS = {"/": "%2F"}
   CERT_AUTH_PATH =  '/v1/auth/cert/login'.freeze
 
   # auth against the server, set a token in the Vault obj
   def initialize(vault_address = nil, pemfile_path = nil, ssl_verify = false, annotations = nil, output_path = '/secrets/')
     raise "vault address not found" if vault_address.nil?
-    raise "pemfile not provided" if pemfile_path.nil? || !File.exist?(pemfile_path)
-    raise "path to annotations" if annotations.nil? || !File.exist?(annotations)
+    raise "pemfile not found" unless File.exist?(pemfile_path.to_s)
+    raise "annotations file not found" unless File.exist?(annotations.to_s)
+
     @annotations = annotations
     @output_path = output_path
 
     pem_contents = File.read(pemfile_path)
     default_options = {
       use_ssl: true,
-      verify_mode: 0,
+      verify_mode: 0, # TODO: make secure
       cert: OpenSSL::X509::Certificate.new(pem_contents),
       key: OpenSSL::PKey::RSA.new(pem_contents)
     }
