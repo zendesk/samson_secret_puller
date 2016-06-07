@@ -1,4 +1,4 @@
-# Secret puller
+# Secret puller [![Build Status](https://travis-ci.org/zendesk/samson_secret_puller.svg?branch=master)](https://travis-ci.org/zendesk/samson_secret_puller)
 
 Applciation to run in a kubernets sidecar app with used in [samson](https://github.com/zendesk/samson),
 to publish secrets and configs to a containerized application.
