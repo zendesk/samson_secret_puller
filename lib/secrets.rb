@@ -4,6 +4,7 @@ class SecretsClient
   ENCODINGS = {"/": "%2F"}.freeze
   CERT_AUTH_PATH =  '/v1/auth/cert/login'.freeze
   VAULT_SECRET_BACKEND = 'secret/'.freeze
+  KEY_PARTS = 4
 
   # auth against the server, set a token in the Vault obj
   def initialize(vault_address:, pemfile_path:, ssl_verify:, annotations:, output_path:)
@@ -15,45 +16,35 @@ class SecretsClient
     @output_path = output_path
 
     Vault.configure do |config|
-      config.ssl_pem_file = pemfile_path # this is the secrets volume insde the k8s cluster
+      config.ssl_pem_file = pemfile_path
       config.ssl_verify = ssl_verify
       config.address = vault_address
-
-      # Timeout the connection after a certain amount of time (seconds)
-      config.timeout = 5
-
-      # It is also possible to have finer-grained controls over the timeouts, these
-      # may also be read as environment variables
       config.ssl_timeout  = 3
       config.open_timeout = 3
       config.read_timeout = 2
     end
 
+    # fetch vault token by authenticating with given pem
     response = http_get(Vault.address, ssl_verify: ssl_verify, pem: pemfile_path)
     Vault.token = JSON.parse(response).fetch("auth").fetch("client_token")
 
-    # make sure that we have secret keys
-    @secret_keys = IO.readlines(@annotations).map do |line|
-      skip unless line.start_with?(VAULT_SECRET_BACKEND)
-      key = line.split("=", 2).first.split("/").last
-      value = line.split("=", 2).last.chomp.delete('"')
-      {key => value}
+    @secret_keys = File.read(@annotations).split("\n").map do |line|
+      next unless line.start_with?(VAULT_SECRET_BACKEND)
+      key = line.split("/", KEY_PARTS).last
+      [key, line]
     end.compact
-    raise "#{SECRET_KEY_PATH} contains no secrets" unless @secret_keys.count > 0
+    raise "#{annotations} contains no secrets" if @secret_keys.empty?
   end
 
   def process
-    @secret_keys.each do |secret|
-      secret.each do |name, path|
-        if contents = read(path)
-          File.write(@output_path + name.chomp, contents)
-          STDOUT.puts "Writing #{name} with contents from secret key #{path}"
-        end
+    @secret_keys.each do |key, path|
+      if contents = read(path)
+        File.write("#{@output_path}/#{key}", contents)
+        puts "Writing #{key} with contents from secret key #{path}"
       end
     end
-    # after we are done with the list of secrets, write to a file to make sure
-    # the primary container knows about it
-    File.write(@output_path + '.done', Time.now.to_s)
+    # notify primary container that it is now safe to read all secrets
+    File.write("#{@output_path}/.done", Time.now.to_s)
   end
 
   private
@@ -74,7 +65,7 @@ class SecretsClient
   end
 
   def read(key)
-    key_segments = key.split('/', 4)
+    key_segments = key.split('/', KEY_PARTS)
     final_key = convert_path(key_segments.delete_at(3), :encode)
     key = key_segments.join('/') + '/' + final_key
     result = Vault.logical.read(vault_path(key))
