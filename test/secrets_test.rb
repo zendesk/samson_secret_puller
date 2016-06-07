@@ -1,4 +1,9 @@
 require 'bundler/setup'
+
+require 'single_cov'
+SingleCov.setup :minitest
+SingleCov.covered!
+
 require 'maxitest/autorun'
 require 'webmock/minitest'
 require 'tmpdir'
@@ -6,19 +11,35 @@ require 'tmpdir'
 require_relative "../lib/secrets.rb"
 
 describe SecretsClient do
-  let(:client) { SecretsClient.new('https://foo.bar:8200', 'vaultpem', false, 'annotations', @dir) }
+  def process
+    old = $stdout
+    $stdout = StringIO.new
+    client.write_secrets
+  ensure
+    $stdout = old
+  end
+
+  let(:client) do
+    SecretsClient.new(
+      vault_address: 'https://foo.bar:8200',
+      pemfile_path: 'vaultpem',
+      ssl_verify: false,
+      annotations: 'annotations',
+      output_path: Dir.pwd
+    )
+  end
+  let(:auth_reply) { {auth: {client_token: 'sometoken'}}.to_json }
 
   before do
     stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").
-      to_return(body: {auth: {client_token: 'sometoken'}}.to_json)
+      to_return(body: auth_reply)
   end
 
   around do |test|
     Dir.mktmpdir do |dir|
       Dir.chdir(dir) do
-        @dir = dir + "/"
-        File.write('vaultpem', File.read(File.expand_path("../fixtures/test.pem", __FILE__)))
-        File.write('annotations', "secret/this/is/my/SECRET")
+        File.write("vaultpem", File.read(Bundler.root.join("test/fixtures/test.pem")))
+        File.write('annotations', "secret/SECRET=this/is/very/hidden")
         test.call
       end
     end
@@ -42,26 +63,38 @@ describe SecretsClient do
 
   describe "#process" do
     let(:reply) { {data: {vault: 'foo'}}.to_json }
+    let(:url) { 'https://foo.bar:8200/v1/secret%2Fthis%2Fis%2Fvery%2Fhidden' }
 
     before do
-      stub_request(:get, 'https://foo.bar:8200/v1/secret%2Fsecret%2Fthis%2Fis%2Fmy%252FSECRET').
-        to_return(body: reply, headers: {'Content-Type': 'application/json'})
+      stub_request(:get, url).to_return(body: reply, headers: {'Content-Type': 'application/json'})
     end
 
     it 'works' do
-      client.process
-      File.read('/tmp/SECRET').must_equal("foo")
+      process
+      File.read("SECRET").must_equal("foo")
     end
 
     it 'ignores newline in key name' do
       File.write('annotations', File.read('annotations') + "\n")
-      client.process
-      File.read('/tmp/SECRET').must_equal("foo")
+      process
+      File.read("SECRET").must_equal("foo")
+    end
+
+    it 'ignores non-secrets' do
+      File.write('annotations', File.read('annotations') + "\n" + "other-annotation=this/is/not/hidden")
+      process
+      assert File.exist?("SECRET")
+    end
+
+    it 'raises when no secrets were used' do
+      File.write('annotations', "other-annotation=this/is/not/hidden")
+      assert_raises(RuntimeError) { process }
+      refute File.exist?("SECRET")
     end
 
     it "raises when response is invalid" do
       reply.replace({foo: {bar: 1}}.to_json)
-      assert_raises(RuntimeError) { client.process }
+      assert_raises(RuntimeError) { process }
     end
   end
 end
