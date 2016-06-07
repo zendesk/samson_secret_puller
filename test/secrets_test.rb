@@ -39,7 +39,7 @@ describe SecretsClient do
     Dir.mktmpdir do |dir|
       Dir.chdir(dir) do
         File.write("vaultpem", File.read(Bundler.root.join("test/fixtures/test.pem")))
-        File.write('annotations', "secret/this/is/SECRET")
+        File.write('annotations', "secret/SECRET=this/is/very/hidden")
         test.call
       end
     end
@@ -63,7 +63,7 @@ describe SecretsClient do
 
   describe "#process" do
     let(:reply) { {data: {vault: 'foo'}}.to_json }
-    let(:url) { 'https://foo.bar:8200/v1/secret%2Fsecret%2Fthis%2Fis%2FSECRET' }
+    let(:url) { 'https://foo.bar:8200/v1/secret%2Fthis%2Fis%2Fvery%2Fhidden' }
 
     before do
       stub_request(:get, url).to_return(body: reply, headers: {'Content-Type': 'application/json'})
@@ -81,14 +81,13 @@ describe SecretsClient do
     end
 
     it 'ignores non-secrets' do
-      File.write('annotations', File.read('annotations') + "\n" + "nope/this/is/no/GEHEIMNISS")
+      File.write('annotations', File.read('annotations') + "\n" + "other-annotation=this/is/not/hidden")
       process
       assert File.exist?("SECRET")
-      refute File.exist?("GEHEIMNISS")
     end
 
     it 'raises when no secrets were used' do
-      File.write('annotations', "nope/this/is/no/SECRET")
+      File.write('annotations', "other-annotation=this/is/not/hidden")
       assert_raises(RuntimeError) { process }
       refute File.exist?("SECRET")
     end

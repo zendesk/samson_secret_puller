@@ -30,8 +30,9 @@ class SecretsClient
 
     @secret_keys = File.read(@annotations).split("\n").map do |line|
       next unless line.start_with?(VAULT_SECRET_BACKEND)
-      key = line.split("/", KEY_PARTS).last
-      [key, line]
+      key, path = line.split("=", 2)
+      key = key.split("/", 2).last
+      [key, path]
     end.compact
     raise "#{annotations} contains no secrets" if @secret_keys.empty?
   end
