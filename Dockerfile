@@ -1,14 +1,26 @@
-FROM sandlerr/ruby:2.2.2
+# ruby:2.3.1-alpine
+FROM ruby@sha256:4a8993318e41d8814ea6a30ca2eccf36078b59ed2ab2f9cf2b4be81331d8caa3
+
+RUN apk add --update --no-cache \
+  bash
 
 RUN mkdir /app
 WORKDIR /app
 
-ADD Gemfile /app/Gemfile
-ADD Gemfile.lock /app/Gemfile.lock
+# bundle
+ADD Gemfile .
+ADD Gemfile.lock .
 ADD vendor/cache /app/vendor/cache
+RUN cd /app && bundle install --quiet --local --jobs 4
+
+# app
 ADD bin /app/bin
 ADD lib /app/lib
 
-RUN cd /app && bundle install --quiet --local --jobs 4
+# test
+ADD Rakefile .
+ADD .travis.yml .
+ADD .rubocop.yml .
+ADD test /app/test
 
 CMD bundle exec bin/secrets

@@ -132,7 +132,13 @@ Style/IfUnlessModifier:
 Lint/ShadowingOuterLocalVariable:
   Enabled: false
 
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Lint/HandleExceptions:
+  Enabled: false
+
 AllCops:
-  TargetRubyVersion: 2.2
+  TargetRubyVersion: 2.3
   Exclude:
     - vendor/**/*

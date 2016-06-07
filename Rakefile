@@ -1,6 +1,11 @@
 require 'bundler/setup'
+require 'yaml'
 
-task default: [:test, :rubocop]
+travis = YAML.load_file(Bundler.root.join('.travis.yml')).
+  fetch('env').
+  map { |v| v.delete('TASK=') }
+
+task default: travis
 
 desc "Test"
 task :test do

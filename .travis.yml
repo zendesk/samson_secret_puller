@@ -1,0 +1,12 @@
+language: bash
+services:
+- docker
+branches:
+  only: master
+before_script:
+- docker -v
+- docker build -t kube_service_watcher .
+script: docker run -it --rm kube_service_watcher rake $TASK
+env:
+- TASK=test
+- TASK=rubocop

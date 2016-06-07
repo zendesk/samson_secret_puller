@@ -18,7 +18,7 @@ describe "CLI" do
 
     def initialize(port, replies)
       @port = port
-      @replies = replies.merge(TEST_ENDPOINT => 'PONG')
+      @replies = replies
     end
 
     def boot
@@ -27,7 +27,7 @@ describe "CLI" do
           self,
           Port: @port,
           Logger: WEBrick::Log.new("/dev/null"),
-          AccessLog: [],
+          AccessLog: []
         ) { |s| @server = s }
       end
     end
