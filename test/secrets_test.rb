@@ -1,4 +1,9 @@
 require 'bundler/setup'
+
+require 'single_cov'
+SingleCov.setup :minitest
+SingleCov.covered! uncovered: 5
+
 require 'maxitest/autorun'
 require 'webmock/minitest'
 require 'tmpdir'

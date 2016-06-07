@@ -57,7 +57,7 @@ class SecretsClient
       skip unless line.start_with?(VAULT_SECRET_BACKEND)
       key = line.split("=", 2).first.split("/").last
       value = line.split("=", 2).last.chomp.delete('"')
-      @secret_keys << {key => value}
+      {key => value}
     end.compact
     raise "#{SECRET_KEY_PATH} contains no secrets" unless @secret_keys.count > 0
   end
