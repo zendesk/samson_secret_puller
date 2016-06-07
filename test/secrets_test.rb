@@ -11,7 +11,15 @@ require 'tmpdir'
 require_relative "../lib/secrets.rb"
 
 describe SecretsClient do
-  let(:client) { SecretsClient.new('https://foo.bar:8200', 'vaultpem', false, 'annotations', @dir) }
+  let(:client) do
+    SecretsClient.new(
+      vault_address: 'https://foo.bar:8200',
+      pemfile_path: 'vaultpem',
+      ssl_verify: false,
+      annotations: 'annotations',
+      output_path: @dir
+    )
+  end
 
   before do
     stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").

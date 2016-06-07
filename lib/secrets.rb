@@ -6,13 +6,7 @@ class SecretsClient
   VAULT_SECRET_BACKEND = 'secret/'.freeze
 
   # auth against the server, set a token in the Vault obj
-  def initialize(
-    vault_address = nil,
-    pemfile_path = nil,
-    ssl_verify = false,
-    annotations = nil,
-    output_path = '/secrets/'
-  )
+  def initialize(vault_address:, pemfile_path:, ssl_verify:, annotations:, output_path:)
     raise "vault address not found" if vault_address.nil?
     raise "pemfile not found" unless File.exist?(pemfile_path.to_s)
     raise "annotations file not found" unless File.exist?(annotations.to_s)
