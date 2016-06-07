@@ -10,6 +10,11 @@ defaults to '/vault-auth/pem'
 VAULT_TLS_VERIFY: optional, defaults to, false
 SIDECAR_SECRET_PATH: optional defaults to  '/secrets'
 
+### Example
+
+Sidecar reads annotations `secret/BAR=foo/bar/baz/foo` and generates a file called `BAR` in `SIDECAR_SECRET_PATH`
+with the content being the result of the vault lookup for `foo/bar/baz/foo`.
+
 ### Test
 
 `bundle && rake`
