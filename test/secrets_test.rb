@@ -14,7 +14,7 @@ describe SecretsClient do
   def process
     old = $stdout
     $stdout = StringIO.new
-    client.process
+    client.write_secrets
   ensure
     $stdout = old
   end
