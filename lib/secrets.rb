@@ -14,14 +14,6 @@ class SecretsClient
     @annotations = annotations
     @output_path = output_path
 
-    pem_contents = File.read(pemfile_path)
-    default_options = {
-      use_ssl: true,
-      verify_mode: (ssl_verify ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE),
-      cert: OpenSSL::X509::Certificate.new(pem_contents),
-      key: OpenSSL::PKey::RSA.new(pem_contents)
-    }
-
     Vault.configure do |config|
       config.ssl_pem_file = pemfile_path # this is the secrets volume insde the k8s cluster
       config.ssl_verify = ssl_verify
@@ -37,14 +29,8 @@ class SecretsClient
       config.read_timeout = 2
     end
 
-    uri = URI.parse(Vault.address)
-    @http = Net::HTTP.start(uri.host, uri.port, default_options)
-    response = @http.request(Net::HTTP::Post.new(CERT_AUTH_PATH))
-    if response.code.to_i == 200
-      Vault.token = JSON.parse(response.body).delete("auth")["client_token"]
-    else
-      raise "Missing Token"
-    end
+    response = http_get(Vault.address, ssl_verify: ssl_verify, pem: pemfile_path)
+    Vault.token = JSON.parse(response).fetch("auth").fetch("client_token")
 
     # make sure that we have secret keys
     @secret_keys = IO.readlines(@annotations).map do |line|
@@ -71,6 +57,21 @@ class SecretsClient
   end
 
   private
+
+  def http_get(url, ssl_verify:, pem:)
+    pem_contents = File.read(pem)
+    options = {
+      use_ssl: true,
+      verify_mode: (ssl_verify ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE),
+      cert: OpenSSL::X509::Certificate.new(pem_contents),
+      key: OpenSSL::PKey::RSA.new(pem_contents)
+    }
+
+    uri = URI.parse(url)
+    http = Net::HTTP.start(uri.host, uri.port, options)
+    response = http.request(Net::HTTP::Post.new(CERT_AUTH_PATH))
+    response.body
+  end
 
   def read(key)
     key_segments = key.split('/', 4)

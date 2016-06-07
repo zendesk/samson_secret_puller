@@ -20,10 +20,11 @@ describe SecretsClient do
       output_path: @dir
     )
   end
+  let(:auth_reply) { {auth: {client_token: 'sometoken'}}.to_json }
 
   before do
     stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").
-      to_return(body: {auth: {client_token: 'sometoken'}}.to_json)
+      to_return(body: auth_reply)
   end
 
   around do |test|
@@ -55,10 +56,10 @@ describe SecretsClient do
 
   describe "#process" do
     let(:reply) { {data: {vault: 'foo'}}.to_json }
+    let(:url) { 'https://foo.bar:8200/v1/secret%2Fsecret%2Fthis%2Fis%2Fmy%252FSECRET' }
 
     before do
-      stub_request(:get, 'https://foo.bar:8200/v1/secret%2Fsecret%2Fthis%2Fis%2Fmy%252FSECRET').
-        to_return(body: reply, headers: {'Content-Type': 'application/json'})
+      stub_request(:get, url).to_return(body: reply, headers: {'Content-Type': 'application/json'})
     end
 
     it 'works' do
