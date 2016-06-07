@@ -20,6 +20,7 @@ class SecretsClient
       cert: OpenSSL::X509::Certificate.new(pem_contents),
       key: OpenSSL::PKey::RSA.new(pem_contents)
     }
+
     Vault.configure do |config|
       config.ssl_pem_file = pemfile_path #this is the secrets volume insde the k8s cluster
       config.ssl_verify = false #FIXME: make this ENV driven
@@ -62,7 +63,7 @@ class SecretsClient
       contents = read(path)
         if contents
           File.open(@output_path + name.to_s.chomp, 'w+') { |f| f.write contents }
-          STDOUT.puts "Writing #{name.to_s} with contents from secret key #{path}"
+          STDOUT.puts "Writing #{name.to_s} with contents from secret key #{path}" unless ENV.fetch("NOLOG", false)
         end
       end
     end
