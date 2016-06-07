@@ -63,13 +63,13 @@ class SecretsClient
       contents = read(path)
         if contents
           File.open(@output_path + name.to_s.chomp, 'w+') { |f| f.write contents }
-          STDOUT.puts "Writing #{name.to_s} with contents from secret key #{path}" unless ENV.fetch("NOLOG", false)
+          STDOUT.puts "Writing #{name.to_s} with contents from secret key #{path}" unless ENV["NOLOG"]
         end
       end
     end
     # after we are done with the list of screts, write to a file to make sure
     # the primary container knows about it
-    File.open(@output_path + '.done', 'w+') { |f| f.write Time.now.to_s }
+    File.write(@output_path + '.done', Time.now.to_s)
   end
 
   private
