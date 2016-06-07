@@ -36,7 +36,7 @@ class SecretsClient
     raise "#{annotations} contains no secrets" if @secret_keys.empty?
   end
 
-  def process
+  def write_secrets
     @secret_keys.each do |key, path|
       contents = read(path)
       File.write("#{@output_path}/#{key}", contents)
