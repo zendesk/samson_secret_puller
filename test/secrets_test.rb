@@ -1,12 +1,6 @@
-require 'bundler/setup'
+require_relative 'test_helper'
 
-require 'single_cov'
-SingleCov.setup :minitest
 SingleCov.covered!
-
-require 'maxitest/autorun'
-require 'webmock/minitest'
-require 'tmpdir'
 
 require_relative "../lib/secrets.rb"
 

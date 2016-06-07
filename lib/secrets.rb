@@ -25,7 +25,7 @@ class SecretsClient
     end
 
     # fetch vault token by authenticating with given pem
-    response = http_get(Vault.address, ssl_verify: ssl_verify, pem: pemfile_path)
+    response = http_post(File.join(Vault.address, CERT_AUTH_PATH), ssl_verify: ssl_verify, pem: pemfile_path)
     Vault.token = JSON.parse(response).fetch("auth").fetch("client_token")
 
     @secret_keys = File.read(@annotations).split("\n").map do |line|
@@ -49,18 +49,18 @@ class SecretsClient
 
   private
 
-  def http_get(url, ssl_verify:, pem:)
+  def http_post(url, ssl_verify:, pem:)
     pem_contents = File.read(pem)
     uri = URI.parse(url)
     http = Net::HTTP.start(
       uri.host,
       uri.port,
-      use_ssl: true,
+      use_ssl: (uri.scheme == 'https'),
       verify_mode: (ssl_verify ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE),
       cert: OpenSSL::X509::Certificate.new(pem_contents),
       key: OpenSSL::PKey::RSA.new(pem_contents)
     )
-    response = http.request(Net::HTTP::Post.new(CERT_AUTH_PATH))
+    response = http.request(Net::HTTP::Post.new(uri.path))
     response.body
   end
 
