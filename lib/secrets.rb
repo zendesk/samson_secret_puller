@@ -1,11 +1,18 @@
 require 'vault'
 
 class SecretsClient
-  ENCODINGS = {"/": "%2F"}
+  ENCODINGS = {"/": "%2F"}.freeze
   CERT_AUTH_PATH =  '/v1/auth/cert/login'.freeze
+  VAULT_SECRET_BACKEND = 'secret/'.freeze
 
   # auth against the server, set a token in the Vault obj
-  def initialize(vault_address = nil, pemfile_path = nil, ssl_verify = false, annotations = nil, output_path = '/secrets/')
+  def initialize(
+    vault_address = nil,
+    pemfile_path = nil,
+    ssl_verify = false,
+    annotations = nil,
+    output_path = '/secrets/'
+  )
     raise "vault address not found" if vault_address.nil?
     raise "pemfile not found" unless File.exist?(pemfile_path.to_s)
     raise "annotations file not found" unless File.exist?(annotations.to_s)
@@ -16,13 +23,14 @@ class SecretsClient
     pem_contents = File.read(pemfile_path)
     default_options = {
       use_ssl: true,
-      verify_mode: 0, # TODO: make secure
+      verify_mode: (ssl_verify ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE),
       cert: OpenSSL::X509::Certificate.new(pem_contents),
       key: OpenSSL::PKey::RSA.new(pem_contents)
     }
+
     Vault.configure do |config|
-      config.ssl_pem_file = pemfile_path #this is the secrets volume insde the k8s cluster
-      config.ssl_verify = false #FIXME: make this ENV driven
+      config.ssl_pem_file = pemfile_path # this is the secrets volume insde the k8s cluster
+      config.ssl_verify = ssl_verify
       config.address = vault_address
 
       # Timeout the connection after a certain amount of time (seconds)
@@ -38,37 +46,34 @@ class SecretsClient
     uri = URI.parse(Vault.address)
     @http = Net::HTTP.start(uri.host, uri.port, default_options)
     response = @http.request(Net::HTTP::Post.new(CERT_AUTH_PATH))
-    if (response.code.to_i == 200)
+    if response.code.to_i == 200
       Vault.token = JSON.parse(response.body).delete("auth")["client_token"]
     else
       raise "Missing Token"
     end
 
     # make sure that we have secret keys
-    @secret_keys = []
-    IO.readlines(@annotations).each do |line|
-      if line =~ /^secret\/.*$/
-        key = line.split("=").first.split("/").last
-        value = line.split("=").last.chomp.gsub('"','')
-        @secret_keys << {"#{key}": value}
-      end
-    end
+    @secret_keys = IO.readlines(@annotations).map do |line|
+      skip unless line.start_with?(VAULT_SECRET_BACKEND)
+      key = line.split("=", 2).first.split("/").last
+      value = line.split("=", 2).last.chomp.delete('"')
+      @secret_keys << {key => value}
+    end.compact
     raise "#{SECRET_KEY_PATH} contains no secrets" unless @secret_keys.count > 0
   end
 
   def process
     @secret_keys.each do |secret|
-    secret.each do |name, path|
-      contents = read(path)
-        if contents
-          File.open(@output_path + name.to_s.chomp, 'w+') { |f| f.write contents }
-          STDOUT.puts "Writing #{name.to_s} with contents from secret key #{path}"
+      secret.each do |name, path|
+        if contents = read(path)
+          File.write(@output_path + name.chomp, contents)
+          STDOUT.puts "Writing #{name} with contents from secret key #{path}"
         end
       end
     end
-    # after we are done with the list of screts, write to a file to make sure
+    # after we are done with the list of secrets, write to a file to make sure
     # the primary container knows about it
-    File.open(@output_path + '.done', 'w+') { |f| f.write Time.now.to_s }
+    File.write(@output_path + '.done', Time.now.to_s)
   end
 
   private
@@ -93,7 +98,7 @@ class SecretsClient
   end
 
   def vault_path(key)
-    "secret/" + key
+    VAULT_SECRET_BACKEND + key
   end
 
   def convert_path(string, direction)
@@ -103,7 +108,7 @@ class SecretsClient
     elsif direction == :encode
       ENCODINGS.each { |k, v| string.gsub!(k.to_s, v.to_s) }
     else
-      raise ArgumentError.new("direction is required")
+      raise ArgumentError, "direction is required"
     end
     string
   end

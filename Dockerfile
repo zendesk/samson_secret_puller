@@ -5,10 +5,9 @@ WORKDIR /app
 
 ADD Gemfile /app/Gemfile
 ADD Gemfile.lock /app/Gemfile.lock
-ADD vendor /app/vendor
 ADD bin /app/bin
 ADD lib /app/lib
 
-RUN cd /app && bundle install --quiet --local --jobs 4 || bundle check
+RUN cd /app && bundle install --quiet --local --jobs 4
 
 CMD bundle exec bin/secrets
