@@ -51,51 +51,37 @@ class SecretsClient
 
   def http_get(url, ssl_verify:, pem:)
     pem_contents = File.read(pem)
-    options = {
+    uri = URI.parse(url)
+    http = Net::HTTP.start(
+      uri.host,
+      uri.port,
       use_ssl: true,
       verify_mode: (ssl_verify ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE),
       cert: OpenSSL::X509::Certificate.new(pem_contents),
       key: OpenSSL::PKey::RSA.new(pem_contents)
-    }
-
-    uri = URI.parse(url)
-    http = Net::HTTP.start(uri.host, uri.port, options)
+    )
     response = http.request(Net::HTTP::Post.new(CERT_AUTH_PATH))
     response.body
   end
 
   def read(key)
-    key_segments = key.split('/', KEY_PARTS)
-    final_key = convert_path(key_segments.delete_at(3), :encode)
-    key = key_segments.join('/') + '/' + final_key
+    key = normalize_key(key)
     result = Vault.logical.read(vault_path(key))
-    unless result.respond_to?(:data)
-      raise "Bad results returned from vault server #{result.inspect}"
+    if !result.respond_to?(:data) || !result.data || !result.data.is_a?(Hash)
+      raise "Bad results returned from vault server for #{key}: #{result.inspect}"
     end
-    if result.data.nil?
-      raise "vault response contains no payload"
-    end
-    result = result.to_h
-    unless result.respond_to?(:merge)
-      raise "converting vault respones to hash failed #{result.inspect}"
-    end
-    result = result.merge(result.delete(:data))
-    result.delete(:vault)
+    result.data.fetch(:vault)
+  end
+
+  # keys could include slashes in last part, which we would then be unable to resulve
+  # so we encode them
+  def normalize_key(key)
+    parts = key.split('/', KEY_PARTS)
+    ENCODINGS.each { |k, v| parts.last.gsub!(k.to_s, v.to_s) }
+    parts.join('/')
   end
 
   def vault_path(key)
     VAULT_SECRET_BACKEND + key
-  end
-
-  def convert_path(string, direction)
-    string = string.dup
-    if direction == :decode
-      ENCODINGS.each { |k, v| string.gsub!(v.to_s, k.to_s) }
-    elsif direction == :encode
-      ENCODINGS.each { |k, v| string.gsub!(k.to_s, v.to_s) }
-    else
-      raise ArgumentError, "direction is required"
-    end
-    string
   end
 end
