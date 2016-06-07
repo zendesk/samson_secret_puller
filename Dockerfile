@@ -5,6 +5,7 @@ WORKDIR /app
 
 ADD Gemfile /app/Gemfile
 ADD Gemfile.lock /app/Gemfile.lock
+ADD vendor/cache /app/vendor/cache
 ADD bin /app/bin
 ADD lib /app/lib
 

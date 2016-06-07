@@ -18,7 +18,7 @@ SIDECAR_SECRET_PATH: optional defaults to  '/secrets'
 
 ```
 ... build ...
-docker build -t samson-secret-puller . 2>&1 >/dev/null
+docker build -t samson-secret-puller .
 docker tag -f samson-secret-puller docker-registry.zende.sk/samson-secret-puller:latest
 docker push docker-registry.zende.sk/samson-secret-puller:latest
 ```

@@ -38,10 +38,9 @@ class SecretsClient
 
   def process
     @secret_keys.each do |key, path|
-      if contents = read(path)
-        File.write("#{@output_path}/#{key}", contents)
-        puts "Writing #{key} with contents from secret key #{path}"
-      end
+      contents = read(path)
+      File.write("#{@output_path}/#{key}", contents)
+      puts "Writing #{key} with contents from secret key #{path}"
     end
     # notify primary container that it is now safe to read all secrets
     File.write("#{@output_path}/.done", Time.now.to_s)
