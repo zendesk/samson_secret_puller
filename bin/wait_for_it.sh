@@ -7,24 +7,24 @@ DONE_FILE=/secrets/.done
 TIME=60
 
 function exit_success {
-	exit 0
+  exit 0
 }
 
 function exit_timeout {
-	echo "Timeout waiting for secrets"
-	exit 1
+  echo "Timeout waiting for secrets"
+  exit 1
 }
 
 function exit_error {
-	exit 2
+  exit 2
 }
 
 while [ $TIME -gt 0 ]; do
-	TIME=$(($TIME - 1))
-	sleep 1
-	if [ -f /tmp/.done ]; then
-		exit_success
-	fi
+  TIME=$(($TIME - 1))
+  sleep 1
+  if [ -f /tmp/.done ]; then
+    exit_success
+  fi
 done
 
 exit_timeout
