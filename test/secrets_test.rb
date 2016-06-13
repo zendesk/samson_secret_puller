@@ -74,6 +74,12 @@ describe SecretsClient do
       File.read("SECRET").must_equal("foo")
     end
 
+    it 'ignores extra quotes in path' do
+      File.write('annotations', File.read('annotations') + '""')
+      process
+      File.read("SECRET").must_equal("foo")
+    end
+
     it 'ignores non-secrets' do
       File.write('annotations', File.read('annotations') + "\n" + "other-annotation=this/is/not/hidden")
       process
@@ -89,6 +95,26 @@ describe SecretsClient do
     it "raises when response is invalid" do
       reply.replace({foo: {bar: 1}}.to_json)
       assert_raises(RuntimeError) { process }
+    end
+  end
+
+  describe "#waiting script" do
+
+    it "times out" do
+      with_env TIMEOUT: "1" do
+        cmd=Bundler.root.join("bin/wait_for_it.sh")
+        %x[#{cmd}]
+        $?.exitstatus.must_equal(1)
+      end
+    end
+
+    it "exits successfuly" do
+      with_env DONE_FILE: './done' do
+        cmd=Bundler.root.join("bin/wait_for_it.sh")
+        File.write('./done', Time.now.to_s)
+        %x[#{cmd}]
+        $?.exitstatus.must_equal(0)
+      end
     end
   end
 end

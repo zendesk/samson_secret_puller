@@ -1,10 +1,15 @@
-#!/bin/sh
+#!/bin/bash
 
 # little script that simply watches for the secret puller to be done.  
 # script will return 0 on success, 1 on timeout (we'll give the puller 60s), and 2 for any other error
 
-DONE_FILE=/secrets/.done
-TIME=60
+if [ -z ${DONE_FILE} ]; then
+	DONE_FILE=/secrets/.done 
+fi
+
+if [ -z ${TIMEOUT} ]; then
+	TIMEOUT=60
+fi
 
 function exit_success {
   exit 0
@@ -19,10 +24,10 @@ function exit_error {
   exit 2
 }
 
-while [ $TIME -gt 0 ]; do
-  TIME=$(($TIME - 1))
+while [ $TIMEOUT -gt 0 ]; do
+  TIMEOUT=$(($TIMEOUT - 1))
   sleep 1
-  if [ -f /tmp/.done ]; then
+  if [ -f $DONE_FILE ]; then
     exit_success
   fi
 done
