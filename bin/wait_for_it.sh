@@ -7,8 +7,10 @@ if [ -z ${DONE_FILE} ]; then
   DONE_FILE=/secrets/.done
 fi
 
-if [ -z ${TIMEOUT} ]; then
+if [ -z $1 ]; then
   TIMEOUT=60
+  else
+  TIMEOUT=$1
 fi
 
 function exit_success {

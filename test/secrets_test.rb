@@ -98,16 +98,14 @@ describe SecretsClient do
     end
   end
 
-  describe "#waiting script" do
-    let(:cmd) { Bundler.root.join("bin/wait_for_it.sh") }
-    it "times out" do
-      with_env TIMEOUT: "1" do
-        `#{cmd}`
-        $?.exitstatus.must_equal(1)
-      end
+  describe "waiting script" do
+    let(:cmd) { Bundler.root.join("bin/wait_for_it.sh 1") }
+    it "times out when .done is never created" do
+      `#{cmd}`
+      $?.exitstatus.must_equal(1)
     end
 
-    it "exits successfuly" do
+    it "exits successfuly when .done is found" do
       with_env DONE_FILE: './done' do
         File.write('./done', Time.now.to_s)
         `#{cmd}`
