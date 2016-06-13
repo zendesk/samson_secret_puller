@@ -87,7 +87,7 @@ describe "CLI" do
 
     replies = {
       '/v1/auth/cert/login' => {auth: {client_token: 'sometoken'}},
-      '/v1/secret%2Ffoo%2Fbar%2Fbaz%2Fbam' => {data: {vault: 'foo'}}
+      '/v1/secret%2Fapps%2Ffoo%2Fbar%2Fbaz%2Fbam' => {data: {vault: 'foo'}}
     }
 
     FakeServer.open(8211, replies) do
