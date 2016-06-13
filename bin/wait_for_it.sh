@@ -4,11 +4,11 @@
 # script will return 0 on success, 1 on timeout (we'll give the puller 60s), and 2 for any other error
 
 if [ -z ${DONE_FILE} ]; then
-	DONE_FILE=/secrets/.done 
+  DONE_FILE=/secrets/.done
 fi
 
 if [ -z ${TIMEOUT} ]; then
-	TIMEOUT=60
+  TIMEOUT=60
 fi
 
 function exit_success {
@@ -26,10 +26,10 @@ function exit_error {
 
 while [ $TIMEOUT -gt 0 ]; do
   TIMEOUT=$(($TIMEOUT - 1))
-  sleep 1
   if [ -f $DONE_FILE ]; then
     exit_success
   fi
+  sleep 1
 done
 
 exit_timeout
