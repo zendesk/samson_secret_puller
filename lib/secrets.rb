@@ -3,7 +3,8 @@ require 'vault'
 class SecretsClient
   ENCODINGS = {"/": "%2F"}.freeze
   CERT_AUTH_PATH =  '/v1/auth/cert/login'.freeze
-  VAULT_SECRET_BACKEND = 'secret/apps/'.freeze
+  VAULT_SECRET_BACKEND = 'secret/'.freeze
+  SAMSON_SECRET_NAMESPACE = 'apps/'.freeze
   KEY_PARTS = 4
 
   # auth against the server, set a token in the Vault obj
@@ -82,6 +83,6 @@ class SecretsClient
   end
 
   def vault_path(key)
-    VAULT_SECRET_BACKEND + key
+    (VAULT_SECRET_BACKEND + SAMSON_SECRET_NAMESPACE + key).delete('"')
   end
 end
