@@ -33,7 +33,7 @@ class SecretsClient
       key, path = line.split("=", 2)
       key = key.split("/", 2).last
       # get rid of extra quotes in case the uesr has them in the string
-      path.gsub!('"','')
+      path.delete!('"')
       [key, path]
     end.compact
     raise "#{annotations} contains no secrets" if @secret_keys.empty?
