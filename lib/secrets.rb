@@ -3,7 +3,7 @@ require 'vault'
 class SecretsClient
   ENCODINGS = {"/": "%2F"}.freeze
   CERT_AUTH_PATH =  '/v1/auth/cert/login'.freeze
-  VAULT_SECRET_BACKEND = 'secret/'.freeze
+  VAULT_SECRET_BACKEND = 'secret/apps/'.freeze
   KEY_PARTS = 4
 
   # auth against the server, set a token in the Vault obj
