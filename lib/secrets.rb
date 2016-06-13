@@ -32,7 +32,7 @@ class SecretsClient
       next unless line.start_with?(VAULT_SECRET_BACKEND)
       key, path = line.split("=", 2)
       key = key.split("/", 2).last
-      # get rid of extra quotes in case the uesr has them in the string
+      # get rid of extra quotes in case the user has them in the string
       path.delete!('"')
       [key, path]
     end.compact
