@@ -57,7 +57,7 @@ describe SecretsClient do
 
   describe "#process" do
     let(:reply) { {data: {vault: 'foo'}}.to_json }
-    let(:url) { 'https://foo.bar:8200/v1/secret%2Fthis%2Fis%2Fvery%2Fhidden' }
+    let(:url) { 'https://foo.bar:8200/v1/secret%2Fapps%2Fthis%2Fis%2Fvery%2Fhidden' }
 
     before do
       stub_request(:get, url).to_return(body: reply, headers: {'Content-Type': 'application/json'})
