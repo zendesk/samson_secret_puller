@@ -23,4 +23,4 @@ ADD .travis.yml .
 ADD .rubocop.yml .
 ADD test /app/test
 
-CMD bundle exec bin/secrets
+CMD mkdir -p /secrets/bin && cp /app/bin/wait_for_it.sh /secrets/bin && bundle exec bin/secrets

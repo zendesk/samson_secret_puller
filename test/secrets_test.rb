@@ -74,6 +74,12 @@ describe SecretsClient do
       File.read("SECRET").must_equal("foo")
     end
 
+    it 'ignores extra quotes in path' do
+      File.write('annotations', File.read('annotations') + '""')
+      process
+      File.read("SECRET").must_equal("foo")
+    end
+
     it 'ignores non-secrets' do
       File.write('annotations', File.read('annotations') + "\n" + "other-annotation=this/is/not/hidden")
       process
@@ -89,6 +95,22 @@ describe SecretsClient do
     it "raises when response is invalid" do
       reply.replace({foo: {bar: 1}}.to_json)
       assert_raises(RuntimeError) { process }
+    end
+  end
+
+  describe "waiting script" do
+    let(:cmd) { Bundler.root.join("bin/wait_for_it.sh 1") }
+    it "times out when .done is never created" do
+      `#{cmd}`
+      $?.exitstatus.must_equal(1)
+    end
+
+    it "exits successfuly when .done is found" do
+      with_env DONE_FILE: './done' do
+        File.write('./done', Time.now.to_s)
+        `#{cmd}`
+        $?.exitstatus.must_equal(0)
+      end
     end
   end
 end
