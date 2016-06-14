@@ -19,20 +19,29 @@ describe SecretsClient do
       pemfile_path: 'vaultpem',
       ssl_verify: false,
       annotations: 'annotations',
-      output_path: Dir.pwd
+      serviceaccount_dir: Dir.pwd,
+      output_path: Dir.pwd,
+      api_url: 'https://foo.bar'
     )
   end
   let(:auth_reply) { {auth: {client_token: 'sometoken'}}.to_json }
+  let(:status_api_body) { {items: [{status: {hostIP: "10.10.10.10"}}]}.to_json }
 
   before do
     stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").
       to_return(body: auth_reply)
+    stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").
+      to_return(body: status_api_body)
+    ENV["KUBERNETES_PORT_443_TCP_ADDR"] = 'foo.bar'
   end
 
   around do |test|
     Dir.mktmpdir do |dir|
       Dir.chdir(dir) do
         File.write("vaultpem", File.read(Bundler.root.join("test/fixtures/test.pem")))
+        File.write("ca.crt", File.read(Bundler.root.join("test/fixtures/test.pem")))
+        File.write("namespace", File.read(Bundler.root.join("test/fixtures/namespace")))
+        File.write("token", File.read(Bundler.root.join("test/fixtures/token")))
         File.write('annotations', "secret/SECRET=this/is/very/hidden")
         test.call
       end
@@ -89,6 +98,17 @@ describe SecretsClient do
     it "raises when response is invalid" do
       reply.replace({foo: {bar: 1}}.to_json)
       assert_raises(RuntimeError) { process }
+    end
+
+    describe "api failures" do
+      before do
+        stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").
+          to_return(status: 500)
+      end
+
+      it "raises when api calls fail" do
+        assert_raises(RuntimeError) { process }
+      end
     end
   end
 end

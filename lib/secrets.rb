@@ -8,13 +8,17 @@ class SecretsClient
   KEY_PARTS = 4
 
   # auth against the server, set a token in the Vault obj
-  def initialize(vault_address:, pemfile_path:, ssl_verify:, annotations:, output_path:)
+  def initialize(vault_address:, pemfile_path:, ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:)
     raise "vault address not found" if vault_address.nil?
     raise "pemfile not found" unless File.exist?(pemfile_path.to_s)
     raise "annotations file not found" unless File.exist?(annotations.to_s)
+    raise "serviceaccount dir #{serviceaccount_dir} not found" unless Dir.exist?(serviceaccount_dir.to_s)
+    raise "api_url is null" if api_url.nil?
 
     @annotations = annotations
     @output_path = output_path
+    @serviceaccount_dir = serviceaccount_dir
+    @api_url = api_url
 
     Vault.configure do |config|
       config.ssl_pem_file = pemfile_path
@@ -68,20 +72,21 @@ class SecretsClient
   end
 
   def hostip
-    token = File.read("/var/run/secrets/kubernetes.io/serviceaccount/token")
-    namespace = File.read("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-    uri = URI.parse("https://" + ENV["KUBERNETES_PORT_443_TCP_ADDR"] + "/api/v1/namespaces/#{namespace}/pods")
+    token = File.read(@serviceaccount_dir + '/token')
+    namespace = File.read(@serviceaccount_dir + '/namespace')
+    uri = URI.parse(@api_url + "/api/v1/namespaces/#{namespace}/pods")
     req = Net::HTTP::Get.new(uri.path)
     req.add_field("Authorization", "Bearer #{token}")
     http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = true
-    http.ca_file = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    http.use_ssl = (uri.scheme == 'https')
+    http.ca_file = "#{@serviceaccount_dir}/ca.crt"
+    puts uri.host
     response = http.request(req)
     if response.code.to_i == 200
-      api_response = JSON.parse(response.body, symbolize_names:true)
+      api_response = JSON.parse(response.body, symbolize_names: true)
       api_response[:items][0][:status][:hostIP].to_s
     else
-      raise "Could not get hostIP from api server #{uri.host}: #{result.inspect}"
+      raise "Could not get hostIP from api server #{uri.host}: #{api_response.inspect}"
     end
   end
 
