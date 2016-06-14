@@ -44,6 +44,8 @@ class SecretsClient
       File.write("#{@output_path}/#{key}", contents)
       puts "Writing #{key} with contents from secret key #{path}"
     end
+    # Write out the pod's status.hostIP as a secret
+    File.write("#{@output_path}/HOST_IP", hostip)
     # notify primary container that it is now safe to read all secrets
     File.write("#{@output_path}/.done", Time.now.to_s)
   end
@@ -63,6 +65,24 @@ class SecretsClient
     )
     response = http.request(Net::HTTP::Post.new(uri.path))
     response.body
+  end
+
+  def hostip
+    token = File.read("/var/run/secrets/kubernetes.io/serviceaccount/token")
+    namespace = File.read("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+    uri = URI.parse("https://" + ENV["KUBERNETES_PORT_443_TCP_ADDR"] + "/api/v1/namespaces/#{namespace}/pods")
+    req = Net::HTTP::Get.new(uri.path)
+    req.add_field("Authorization", "Bearer #{token}")
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.ca_file = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    response = http.request(req)
+    if response.code.to_i == 200
+      api_response = JSON.parse(response.body, symbolize_names:true)
+      api_response[:items][0][:status][:hostIP].to_s
+    else
+      raise "Could not get hostIP from api server #{uri.host}: #{result.inspect}"
+    end
   end
 
   def read(key)
