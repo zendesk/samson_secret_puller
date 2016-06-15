@@ -49,7 +49,7 @@ class SecretsClient
       puts "Writing #{key} with contents from secret key #{path}"
     end
     # Write out the pod's status.hostIP as a secret
-    File.write("#{@output_path}/HOST_IP", hostip)
+    File.write("#{@output_path}/HOST_IP", host_ip)
     # notify primary container that it is now safe to read all secrets
     File.write("#{@output_path}/.done", Time.now.to_s)
   end
@@ -71,7 +71,7 @@ class SecretsClient
     response.body
   end
 
-  def hostip
+  def host_ip
     token = File.read(@serviceaccount_dir + '/token')
     namespace = File.read(@serviceaccount_dir + '/namespace')
     uri = URI.parse(@api_url + "/api/v1/namespaces/#{namespace}/pods")
