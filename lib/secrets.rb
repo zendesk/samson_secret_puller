@@ -8,13 +8,17 @@ class SecretsClient
   KEY_PARTS = 4
 
   # auth against the server, set a token in the Vault obj
-  def initialize(vault_address:, pemfile_path:, ssl_verify:, annotations:, output_path:)
+  def initialize(vault_address:, pemfile_path:, ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:)
     raise "vault address not found" if vault_address.nil?
     raise "pemfile not found" unless File.exist?(pemfile_path.to_s)
     raise "annotations file not found" unless File.exist?(annotations.to_s)
+    raise "serviceaccount dir #{serviceaccount_dir} not found" unless Dir.exist?(serviceaccount_dir.to_s)
+    raise "api_url is null" if api_url.nil?
 
     @annotations = annotations
     @output_path = output_path
+    @serviceaccount_dir = serviceaccount_dir
+    @api_url = api_url
 
     Vault.configure do |config|
       config.ssl_pem_file = pemfile_path
@@ -42,8 +46,9 @@ class SecretsClient
     @secret_keys.each do |key, path|
       contents = read(path)
       File.write("#{@output_path}/#{key}", contents)
-      puts "Writing #{key} with contents from secret key #{path}"
     end
+    # Write out the pod's status.hostIP as a secret
+    File.write("#{@output_path}/HOST_IP", host_ip)
     # notify primary container that it is now safe to read all secrets
     File.write("#{@output_path}/.done", Time.now.to_s)
   end
@@ -63,6 +68,29 @@ class SecretsClient
     )
     response = http.request(Net::HTTP::Post.new(uri.path))
     response.body
+  end
+
+  def pod_status
+    token = File.read(@serviceaccount_dir + '/token')
+    namespace = File.read(@serviceaccount_dir + '/namespace')
+    uri = URI.parse(@api_url + "/api/v1/namespaces/#{namespace}/pods")
+    req = Net::HTTP::Get.new(uri.path)
+    req.add_field("Authorization", "Bearer #{token}")
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = (uri.scheme == 'https')
+    http.ca_file = "#{@serviceaccount_dir}/ca.crt"
+    response = http.request(req)
+    if response.code.to_i == 200
+      response
+    else
+      raise "Could not get hostIP from api server #{uri.host}: #{response.inspect}"
+    end
+  end
+
+  def host_ip
+    api_response = pod_status
+    api_response = JSON.parse(api_response.body, symbolize_names: true)
+    api_response[:items][0][:status][:hostIP].to_s
   end
 
   def read(key)
