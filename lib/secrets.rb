@@ -67,29 +67,37 @@ class SecretsClient
       key: OpenSSL::PKey::RSA.new(pem_contents)
     )
     response = http.request(Net::HTTP::Post.new(uri.path))
-    response.body
+    if response.code.to_i == 200
+      response.body
+    else
+      raise "Could not POST #{url}: #{response.code} / #{response.body}"
+    end
   end
 
-  def pod_status
-    token = File.read(@serviceaccount_dir + '/token')
-    namespace = File.read(@serviceaccount_dir + '/namespace')
-    uri = URI.parse(@api_url + "/api/v1/namespaces/#{namespace}/pods")
+  def http_get(url, headers:, ca_file:)
+    uri = URI.parse(url)
     req = Net::HTTP::Get.new(uri.path)
-    req.add_field("Authorization", "Bearer #{token}")
+    headers.each { |k, v| req.add_field(k, v) }
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = (uri.scheme == 'https')
-    http.ca_file = "#{@serviceaccount_dir}/ca.crt"
+    http.ca_file = ca_file
     response = http.request(req)
     if response.code.to_i == 200
-      response
+      response.body
     else
-      raise "Could not get hostIP from api server #{uri.host}: #{response.inspect}"
+      raise "Could not GET #{url}: #{response.code} / #{response.body}"
     end
   end
 
   def host_ip
-    api_response = pod_status
-    api_response = JSON.parse(api_response.body, symbolize_names: true)
+    token = File.read(@serviceaccount_dir + '/token')
+    namespace = File.read(@serviceaccount_dir + '/namespace')
+    api_response = http_get(
+      @api_url + "/api/v1/namespaces/#{namespace}/pods",
+      headers: {"Authorization" => "Bearer #{token}"},
+      ca_file: "#{@serviceaccount_dir}/ca.crt"
+    )
+    api_response = JSON.parse(api_response, symbolize_names: true)
     api_response[:items][0][:status][:hostIP].to_s
   end
 

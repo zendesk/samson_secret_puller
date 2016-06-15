@@ -77,11 +77,6 @@ describe SecretsClient do
       File.read("SECRET").must_equal("foo")
     end
 
-    it 'creates a HOST_IP secret' do
-      process
-      File.read("HOST_IP").must_equal("10.10.10.10")
-    end
-
     it 'ignores newline in key name' do
       File.write('annotations', File.read('annotations') + "\n")
       process
@@ -105,15 +100,24 @@ describe SecretsClient do
       assert_raises(RuntimeError) { process }
     end
 
-    describe "api failures" do
-      before do
-        stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").
-          to_return(status: 500)
+    it "raises when response is not 200" do
+      stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").
+        to_return(status: 500)
+      e = assert_raises(RuntimeError) { process }
+      e.message.must_include("Could not POST https://foo.bar:8200/v1/auth/cert/login: 500 /")
+    end
+
+    describe 'HOST_IP' do
+      it 'creates a HOST_IP secret' do
+        process
+        File.read("HOST_IP").must_equal("10.10.10.10")
       end
 
-      it "raises when api calls fail" do
+      it "raises when host ip api call fails" do
+        stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").
+          to_return(status: 500)
         e = assert_raises(RuntimeError) { process }
-        e.message.must_include("Could not get hostIP from api server")
+        e.message.must_include("Could not GET https://foo.bar/api/v1/namespaces/default/pod")
       end
     end
   end
