@@ -46,7 +46,6 @@ class SecretsClient
     @secret_keys.each do |key, path|
       contents = read(path)
       File.write("#{@output_path}/#{key}", contents)
-      puts "Writing #{key} with contents from secret key #{path}"
     end
     # Write out the pod's status.hostIP as a secret
     File.write("#{@output_path}/HOST_IP", host_ip)
@@ -80,7 +79,6 @@ class SecretsClient
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = (uri.scheme == 'https')
     http.ca_file = "#{@serviceaccount_dir}/ca.crt"
-    puts uri.host
     response = http.request(req)
     if response.code.to_i == 200
       api_response = JSON.parse(response.body, symbolize_names: true)
