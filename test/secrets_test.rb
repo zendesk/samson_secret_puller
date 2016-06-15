@@ -5,6 +5,7 @@ SingleCov.covered!
 require_relative "../lib/secrets.rb"
 
 describe SecretsClient do
+  ENV["KUBERNETES_PORT_443_TCP_ADDR"] = 'foo.bar'
   def process
     old = $stdout
     $stdout = StringIO.new
@@ -32,7 +33,6 @@ describe SecretsClient do
       to_return(body: auth_reply)
     stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").
       to_return(body: status_api_body)
-    ENV["KUBERNETES_PORT_443_TCP_ADDR"] = 'foo.bar'
   end
 
   around do |test|
@@ -107,7 +107,8 @@ describe SecretsClient do
       end
 
       it "raises when api calls fail" do
-        assert_raises(RuntimeError) { process }
+        e = assert_raises(RuntimeError) { process }
+        e.message.must_include("Could not get hostIP from api server")
       end
     end
   end

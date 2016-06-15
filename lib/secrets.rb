@@ -70,7 +70,7 @@ class SecretsClient
     response.body
   end
 
-  def host_ip
+  def pod_status
     token = File.read(@serviceaccount_dir + '/token')
     namespace = File.read(@serviceaccount_dir + '/namespace')
     uri = URI.parse(@api_url + "/api/v1/namespaces/#{namespace}/pods")
@@ -81,11 +81,16 @@ class SecretsClient
     http.ca_file = "#{@serviceaccount_dir}/ca.crt"
     response = http.request(req)
     if response.code.to_i == 200
-      api_response = JSON.parse(response.body, symbolize_names: true)
-      api_response[:items][0][:status][:hostIP].to_s
+      response
     else
-      raise "Could not get hostIP from api server #{uri.host}: #{api_response.inspect}"
+      raise "Could not get hostIP from api server #{uri.host}: #{response.inspect}"
     end
+  end
+
+  def host_ip
+    api_response = pod_status
+    api_response = JSON.parse(api_response.body, symbolize_names: true)
+    api_response[:items][0][:status][:hostIP].to_s
   end
 
   def read(key)
