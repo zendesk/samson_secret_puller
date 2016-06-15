@@ -77,6 +77,11 @@ describe SecretsClient do
       File.read("SECRET").must_equal("foo")
     end
 
+    it 'creates a HOST_IP secret' do
+      process
+      File.read("HOST_IP").must_equal("10.10.10.10")
+    end
+
     it 'ignores newline in key name' do
       File.write('annotations', File.read('annotations') + "\n")
       process
