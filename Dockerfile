@@ -22,5 +22,6 @@ ADD Rakefile .
 ADD .travis.yml .
 ADD .rubocop.yml .
 ADD test /app/test
+ADD gem gem
 
 CMD bundle exec bin/secrets
