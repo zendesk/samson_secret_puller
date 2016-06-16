@@ -3,6 +3,7 @@ GEM
   specs:
     addressable (2.4.0)
     ast (2.2.0)
+    bump (0.5.3)
     crack (0.4.3)
       safe_yaml (~> 1.0.0)
     hashdiff (0.3.0)
@@ -34,6 +35,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  bump
   maxitest
   rack
   rubocop
