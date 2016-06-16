@@ -10,6 +10,7 @@ task default: travis
 desc "Test"
 task :test do
   sh "mtest test/"
+  sh "mtest gem/test/" # need to be separate runs so we do not pollute anything
 end
 
 desc "Rubocop"

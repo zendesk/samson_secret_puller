@@ -29,3 +29,12 @@ docker build -t samson-secret-puller .
 docker tag -f samson-secret-puller docker-registry.zende.sk/samson-secret-puller:latest
 docker push docker-registry.zende.sk/samson-secret-puller:latest
 ```
+
+
+### Gem
+
+```
+cd gem
+rake bump:patch
+rake release
+```
