@@ -98,7 +98,7 @@ describe "CLI" do
       with_env(
         TESTING: 'true',
         VAULT_ADDR: 'http://localhost:8211',
-        VAULT_AUTH_PEM: 'pem',
+        VAULT_AUTH_FILE: 'pem',
         VAULT_TLS_VERIFY: 'false',
         SIDECAR_SECRET_PATH: Dir.pwd,
         SERVICEACCOUNT_DIR: Dir.pwd,

@@ -7,7 +7,7 @@ Samon will need the following ENV vars set:
 
 ```
 VAULT_ADDR: required
-VAULT_AUTH_PEM: localtion of the mounted secret in the k8s cluster, defaults to '/vault-auth/pem'
+VAULT_AUTH_FILE: localtion of the mounted secret in the k8s cluster, defaults to '/vault-auth/authsecret'
 VAULT_TLS_VERIFY: optional, defaults to, false
 SIDECAR_SECRET_PATH: optional defaults to  '/secrets'
 ```

@@ -14,10 +14,21 @@ describe SecretsClient do
     $stdout = old
   end
 
+  let(:token_client) do
+    SecretsClient.new(
+      vault_address: 'https://foo.bar:8200',
+      authfile_path: 'token',
+      ssl_verify: false,
+      annotations: 'annotations',
+      serviceaccount_dir: Dir.pwd,
+      output_path: Dir.pwd,
+      api_url: 'https://foo.bar'
+    )
+  end
   let(:client) do
     SecretsClient.new(
       vault_address: 'https://foo.bar:8200',
-      pemfile_path: 'vaultpem',
+      authfile_path: 'vaultpem',
       ssl_verify: false,
       annotations: 'annotations',
       serviceaccount_dir: Dir.pwd,
@@ -49,13 +60,22 @@ describe SecretsClient do
   end
 
   describe "#initialize" do
-    it "works" do
+    it "works with a pem" do
       client
+    end
+
+    it "works with a token" do
+      token_client
     end
 
     it "fails to initialize with missing pem" do
       File.delete('vaultpem')
       assert_raises(RuntimeError) { client }
+    end
+
+    it "fails to initialize with missing token" do
+      File.delete('token')
+      assert_raises(RuntimeError) { token_client }
     end
 
     it "fails to initialize with missing annotations" do

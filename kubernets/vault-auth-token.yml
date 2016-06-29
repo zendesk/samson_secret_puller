@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vaultauth
+type: Opaque
+data:
+  authsecret: NTE5YzNmYWUtYTZlMy1mMDhmLTViZDAtOTI3ZGJjMmY4ZDBh
