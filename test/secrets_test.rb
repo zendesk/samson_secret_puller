@@ -15,7 +15,7 @@ describe SecretsClient do
   end
 
   let(:client_options) do
-      {
+    {
       vault_address: 'https://foo.bar:8200',
       authfile_path: 'token',
       ssl_verify: false,
@@ -23,7 +23,7 @@ describe SecretsClient do
       serviceaccount_dir: Dir.pwd,
       output_path: Dir.pwd,
       api_url: 'https://foo.bar'
-      }
+    }
   end
 
   let(:token_client) do
