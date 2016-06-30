@@ -14,8 +14,8 @@ describe SecretsClient do
     $stdout = old
   end
 
-  let(:token_client) do
-    SecretsClient.new(
+  let(:client_options) do
+      {
       vault_address: 'https://foo.bar:8200',
       authfile_path: 'token',
       ssl_verify: false,
@@ -23,19 +23,18 @@ describe SecretsClient do
       serviceaccount_dir: Dir.pwd,
       output_path: Dir.pwd,
       api_url: 'https://foo.bar'
-    )
+      }
   end
+
+  let(:token_client) do
+    SecretsClient.new(client_options)
+  end
+
   let(:client) do
-    SecretsClient.new(
-      vault_address: 'https://foo.bar:8200',
-      authfile_path: 'vaultpem',
-      ssl_verify: false,
-      annotations: 'annotations',
-      serviceaccount_dir: Dir.pwd,
-      output_path: Dir.pwd,
-      api_url: 'https://foo.bar'
-    )
+    client_options[:authfile_path] = "vaultpem"
+    SecretsClient.new(client_options)
   end
+
   let(:auth_reply) { {auth: {client_token: 'sometoken'}}.to_json }
   let(:status_api_body) { {items: [{status: {hostIP: "10.10.10.10"}}]}.to_json }
 
