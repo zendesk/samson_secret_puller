@@ -1,4 +1,5 @@
 require 'vault'
+require 'openssl'
 
 class SecretsClient
   ENCODINGS = {"/": "%2F"}.freeze
@@ -8,9 +9,9 @@ class SecretsClient
   KEY_PARTS = 4
 
   # auth against the server, set a token in the Vault obj
-  def initialize(vault_address:, pemfile_path:, ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:)
+  def initialize(vault_address:, authfile_path:, ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:)
     raise "vault address not found" if vault_address.nil?
-    raise "pemfile not found" unless File.exist?(pemfile_path.to_s)
+    raise "authfile not found" unless File.exist?(authfile_path.to_s)
     raise "annotations file not found" unless File.exist?(annotations.to_s)
     raise "serviceaccount dir #{serviceaccount_dir} not found" unless Dir.exist?(serviceaccount_dir.to_s)
     raise "api_url is null" if api_url.nil?
@@ -21,7 +22,6 @@ class SecretsClient
     @api_url = api_url
 
     Vault.configure do |config|
-      config.ssl_pem_file = pemfile_path
       config.ssl_verify = ssl_verify
       config.address = vault_address
       config.ssl_timeout  = 3
@@ -29,9 +29,15 @@ class SecretsClient
       config.read_timeout = 2
     end
 
-    # fetch vault token by authenticating with given pem
-    response = http_post(File.join(Vault.address, CERT_AUTH_PATH), ssl_verify: ssl_verify, pem: pemfile_path)
-    Vault.token = JSON.parse(response).fetch("auth").fetch("client_token")
+    # check and see if the authfile is a pem or a token,
+    # then act accordingly
+    begin
+      OpenSSL::X509::Certificate.new File.read(authfile_path)
+      response = http_post(File.join(Vault.address, CERT_AUTH_PATH), ssl_verify: ssl_verify, pem: authfile_path)
+      Vault.token = JSON.parse(response).fetch("auth").fetch("client_token")
+    rescue OpenSSL::X509::CertificateError
+      Vault.token = File.read(authfile_path)
+    end
 
     @secret_keys = File.read(@annotations).split("\n").map do |line|
       next unless line.start_with?(VAULT_SECRET_BACKEND)
