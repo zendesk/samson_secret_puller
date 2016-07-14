@@ -25,16 +25,11 @@ describe SecretsClient do
       api_url: 'https://foo.bar'
     }
   end
-
-  let(:token_client) do
-    SecretsClient.new(client_options)
-  end
-
+  let(:token_client) { SecretsClient.new(client_options) }
   let(:client) do
     client_options[:authfile_path] = "vaultpem"
     SecretsClient.new(client_options)
   end
-
   let(:auth_reply) { {auth: {client_token: 'sometoken'}}.to_json }
   let(:status_api_body) { {items: [{status: {hostIP: "10.10.10.10"}}]}.to_json }
 

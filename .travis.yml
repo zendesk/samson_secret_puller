@@ -5,8 +5,8 @@ branches:
   only: master
 before_script:
 - docker -v
-- docker build -t kube_service_watcher .
-script: docker run -it --rm kube_service_watcher rake $TASK
+- docker build -t secret_tester .
+script: docker run -it --rm secret_tester rake $TASK
 env:
 - TASK=test
 - TASK=rubocop
