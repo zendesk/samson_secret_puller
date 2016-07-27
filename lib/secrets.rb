@@ -20,6 +20,7 @@ class SecretsClient
     @output_path = output_path
     @serviceaccount_dir = serviceaccount_dir
     @api_url = api_url
+    @ssl_verify = ssl_verify
 
     Vault.configure do |config|
       config.ssl_verify = ssl_verify
@@ -80,13 +81,14 @@ class SecretsClient
     end
   end
 
-  def http_get(url, headers:, ca_file:)
+  def http_get(url, headers:, ca_file:, ssl_verify:)
     uri = URI.parse(url)
     req = Net::HTTP::Get.new(uri.path)
     headers.each { |k, v| req.add_field(k, v) }
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = (uri.scheme == 'https')
     http.ca_file = ca_file
+    http.verify_mode = (ssl_verify ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE)
     response = http.request(req)
     if response.code.to_i == 200
       response.body
@@ -101,7 +103,8 @@ class SecretsClient
     api_response = http_get(
       @api_url + "/api/v1/namespaces/#{namespace}/pods",
       headers: {"Authorization" => "Bearer #{token}"},
-      ca_file: "#{@serviceaccount_dir}/ca.crt"
+      ca_file: "#{@serviceaccount_dir}/ca.crt",
+      ssl_verify: @ssl_verify
     )
     api_response = JSON.parse(api_response, symbolize_names: true)
     api_response[:items][0][:status][:hostIP].to_s
