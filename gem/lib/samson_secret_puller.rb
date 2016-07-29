@@ -5,17 +5,20 @@ module SamsonSecretPuller
   class TimeoutError < StandardError
   end
 
+  ENV = ENV # store a copy since we might replace ENV on Object
+
   class << self
-    def [](key)
-      secrets[key]
+    extend Forwardable
+    [:[], :fetch, :keys, :each, :include?].each do |method|
+      def_delegator :secrets, method
     end
 
-    def fetch(*args, &block)
-      secrets.fetch(*args, &block)
+    def []=(key, value)
+      ENV[key] = secrets[key] = value
     end
 
-    def keys
-      secrets.keys
+    def to_h
+      secrets
     end
 
     private
