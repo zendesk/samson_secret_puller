@@ -132,4 +132,27 @@ describe SamsonSecretPuller do
       SamsonSecretPuller.keys.must_include 'HOME'
     end
   end
+
+  describe '.to_h' do
+    it "generates a complete hash" do
+      SamsonSecretPuller.to_h["FOO"].must_equal "bar"
+    end
+  end
+
+  describe '[]=' do
+    it "writes into the environment and secrets" do
+      SamsonSecretPuller["BAR"] = 'baz'
+      ENV["BAR"].must_equal 'baz'
+      SamsonSecretPuller["BAR"].must_equal 'baz'
+    end
+  end
+
+  describe '.each' do
+    it "iterates all" do
+      found = []
+      SamsonSecretPuller.each { |k, v| found << [k, v] }
+      found.must_include ["FOO", "bar"]
+      found.must_include ["HOME", ENV["HOME"]]
+    end
+  end
 end
