@@ -2,11 +2,12 @@ require 'vault'
 require 'openssl'
 
 class SecretsClient
-  ENCODINGS = {"/": "%2F"}.freeze
-  CERT_AUTH_PATH =  '/v1/auth/cert/login'.freeze
+  ENCODINGS = {"/" => "%2F"}.freeze
+  CERT_AUTH_PATH = '/v1/auth/cert/login'.freeze
   VAULT_SECRET_BACKEND = 'secret/'.freeze
   SAMSON_SECRET_NAMESPACE = 'apps/'.freeze
   KEY_PARTS = 4
+  WILDCARD = '*'.freeze
 
   # auth against the server, set a token in the Vault obj
   def initialize(vault_address:, authfile_path:, ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:)
@@ -104,11 +105,11 @@ class SecretsClient
     result.data.fetch(:vault)
   end
 
-  # keys could include slashes in last part, which we would then be unable to resulve
+  # keys could include slashes in last part, which we would then be unable to resolve
   # so we encode them
   def normalize_key(key)
     parts = key.split('/', KEY_PARTS)
-    ENCODINGS.each { |k, v| parts.last.gsub!(k.to_s, v.to_s) }
+    ENCODINGS.each { |k, v| parts.last.gsub!(k, v) }
     parts.join('/')
   end
 
@@ -117,12 +118,33 @@ class SecretsClient
   end
 
   def secrets_from_annotations(annotations)
-    File.read(annotations).split("\n").map do |line|
+    File.read(annotations).split("\n").flat_map do |line|
       next unless line.start_with?(VAULT_SECRET_BACKEND)
       key, path = line.split("=", 2)
       key = key.split("/", 2).last
-      [key, path]
+
+      if path.include?('*')
+        expand_wildcards(key, path)
+      else
+        [[key, path]]
+      end
     end.compact
+  end
+
+  # foobar/BAR_*=production/foobar/*
+  # - find production/foobar/*
+  # - convert production/foobar/baz to foobar/BAR_BAZ=production/foobar/baz
+  def expand_wildcards(key, path)
+    if !key.end_with?(WILDCARD) || !path.end_with?(WILDCARD)
+      raise "Key and path needs to include wildcard at the end"
+    end
+
+    expanded_path = vault_path(normalize_key(path))
+    base_expanded_path = expanded_path.sub(WILDCARD, '')
+    Vault.logical.list(expanded_path).map do |entry|
+      diff = entry.sub(base_expanded_path, '')
+      [key.sub(WILDCARD, diff.upcase), path.sub(WILDCARD, diff)]
+    end
   end
 
   # check and see if the authfile is a pem or a token,

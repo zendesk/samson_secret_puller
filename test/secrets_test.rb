@@ -14,6 +14,10 @@ describe SecretsClient do
     $stdout = old
   end
 
+  def response_body(body)
+    {body: body, headers: {'Content-Type': 'application/json'}}
+  end
+
   let(:client_options) do
     {
       vault_address: 'https://foo.bar:8200',
@@ -83,12 +87,37 @@ describe SecretsClient do
     let(:url) { 'https://foo.bar:8200/v1/secret%2Fapps%2Fthis%2Fis%2Fvery%2Fhidden' }
 
     before do
-      stub_request(:get, url).to_return(body: reply, headers: {'Content-Type': 'application/json'})
+      stub_request(:get, url).to_return(response_body(reply))
     end
 
     it 'works' do
       process
       File.read("SECRET").must_equal("foo")
+    end
+
+    describe 'wildcards' do
+      it 'expands wildcard secrets' do
+        File.write('annotations', "secret/SECRET_*=this/is/very/hidden_*")
+        stub_request(:get, "#{url}_*?list=true").
+          to_return(response_body({data: {keys: ['secret/apps/this/is/very/hidden_abc']}}.to_json))
+        stub_request(:get, "#{url}_abc").
+          to_return(response_body(reply))
+
+        process
+        File.read("SECRET_ABC").must_equal("foo")
+      end
+
+      it "fails when key has no wildcard" do
+        File.write('annotations', "secret/SECRET=this/is/very/hidden_*")
+        e = assert_raises(RuntimeError) { process }
+        e.message.must_include "wildcard"
+      end
+
+      it "does not supports things following the wildcard" do
+        File.write('annotations', "secret/SECRET_*_a=this/is/very/hidden_*_a")
+        e = assert_raises(RuntimeError) { process }
+        e.message.must_include "wildcard"
+      end
     end
 
     it 'ignores newline in key name' do
