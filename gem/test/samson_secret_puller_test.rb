@@ -155,4 +155,13 @@ describe SamsonSecretPuller do
       found.must_include ["HOME", ENV["HOME"]]
     end
   end
+
+  describe '.replace_ENV!' do
+    it "replaces the ENV" do
+      silence_warnings { SamsonSecretPuller.const_set(:Object, Class.new) }
+      SamsonSecretPuller.replace_ENV!
+      SamsonSecretPuller::Object::ENV.must_equal SamsonSecretPuller
+      SamsonSecretPuller::Object::ENV["FOO"].must_equal "bar"
+    end
+  end
 end

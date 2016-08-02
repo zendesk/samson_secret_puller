@@ -21,6 +21,16 @@ module SamsonSecretPuller
       secrets
     end
 
+    # When we run in kubernetes we need to read secrets from ENV and secret storage
+    # but other parts of the apps or gems do not need to know about this
+    def replace_ENV! # rubocop:disable Style/MethodName
+      old = $VERBOSE
+      $VERBOSE = nil
+      Object.const_set(:ENV, self)
+    ensure
+      $VERBOSE = old
+    end
+
     private
 
     def secrets
