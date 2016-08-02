@@ -1,9 +1,9 @@
 # Secret puller [![Build Status](https://travis-ci.org/zendesk/samson_secret_puller.svg?branch=master)](https://travis-ci.org/zendesk/samson_secret_puller)
 
-Applciation to run in a kubernets sidecar app with used in [samson](https://github.com/zendesk/samson),
+Application to run in a kubernetes sidecar app with used in [samson](https://github.com/zendesk/samson),
 to publish secrets and configs to a containerized application.
 
-Samon will need the following ENV vars set:
+Samson will need the following ENV vars set:
 
 ```
 VAULT_ADDR: required
@@ -14,7 +14,7 @@ SIDECAR_SECRET_PATH: optional defaults to  '/secrets'
 Your kubernetes cluster will also requires a few objects in order for this
 to work.  A token or an pemfile (VAULT_AUTH_FILE) will need to be created
 in vault, then the secret object will need to be created.  The contents
-of the secret must be base64 encoded, and cannot enclude EOF.  See:
+of the secret must be base64 encoded, and cannot include EOF.  See:
 kubernets/vault-auth-secret.yml
 kubernets/vault-auth-token.yml
 
@@ -22,6 +22,20 @@ kubernets/vault-auth-token.yml
 
 Sidecar reads annotations `secret/BAR=foo/bar/baz/foo` and generates a file called `BAR` in `SIDECAR_SECRET_PATH`
 with the content being the result of the vault lookup for `foo/bar/baz/foo`.
+
+Wildcard is supported too: `secret/BAR_*=foo/bar/baz/foo_*`
+
+Inside the host app secrets are loaded by using the `samson_secret_puller` gem.
+
+```
+gem 'samson_secret_puller'
+
+require 'samson_secret_puller'
+
+SamsonSecretPuller.replace_ENV! # waits for /secret/.done to show up
+
+ENV['FOO'] -> read from /secrets/FOO or falls back to ENV['FOO']
+```
 
 ### Test
 
