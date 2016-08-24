@@ -7,7 +7,6 @@ class SecretsClient
   VAULT_SECRET_BACKEND = 'secret/'.freeze
   SAMSON_SECRET_NAMESPACE = 'apps/'.freeze
   KEY_PARTS = 4
-  WILDCARD = '*'.freeze
 
   # auth against the server, set a token in the Vault obj
   def initialize(vault_address:, authfile_path:, ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:)
@@ -118,33 +117,12 @@ class SecretsClient
   end
 
   def secrets_from_annotations(annotations)
-    File.read(annotations).split("\n").flat_map do |line|
+    File.read(annotations).split("\n").map do |line|
       next unless line.start_with?(VAULT_SECRET_BACKEND)
       key, path = line.split("=", 2)
       key = key.split("/", 2).last
-
-      if path.include?('*')
-        expand_wildcards(key, path)
-      else
-        [[key, path]]
-      end
+      [key, path]
     end.compact
-  end
-
-  # foobar/BAR_*=production/foobar/*
-  # - find production/foobar/*
-  # - convert production/foobar/baz to foobar/BAR_BAZ=production/foobar/baz
-  def expand_wildcards(key, path)
-    if !key.end_with?(WILDCARD) || !path.end_with?(WILDCARD)
-      raise "Key and path needs to include wildcard at the end"
-    end
-
-    expanded_path = vault_path(normalize_key(path))
-    base_expanded_path = expanded_path.sub(WILDCARD, '')
-    Vault.logical.list(expanded_path).map do |entry|
-      diff = entry.sub(base_expanded_path, '')
-      [key.sub(WILDCARD, diff.upcase), path.sub(WILDCARD, diff)]
-    end
   end
 
   # check and see if the authfile is a pem or a token,

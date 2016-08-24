@@ -23,8 +23,6 @@ kubernets/vault-auth-token.yml
 Sidecar reads annotations `secret/BAR=foo/bar/baz/foo` and generates a file called `BAR` in `SIDECAR_SECRET_PATH`
 with the content being the result of the vault lookup for `foo/bar/baz/foo`.
 
-Wildcard is supported too: `secret/BAR_*=foo/bar/baz/foo_*`
-
 Inside the host app secrets are loaded by using the `samson_secret_puller` gem.
 
 ```
