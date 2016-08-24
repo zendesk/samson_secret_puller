@@ -15,7 +15,7 @@ describe "CLI" do
   it "dumps secrets" do
     File.write('pem', File.read("#{Bundler.root}/test/fixtures/self_signed_testing.pem"))
     File.write('ca.crt', File.read("#{Bundler.root}/test/fixtures/self_signed_testing.pem"))
-    File.write('token', File.read("#{Bundler.root}/test/fixtures/token"))
+    File.write('token', File.read("#{Bundler.root}/test/fixtures/fake_token"))
     File.write('namespace', File.read("#{Bundler.root}/test/fixtures/namespace"))
     File.write('input', 'secret/BAR=foo/bar/baz/bam')
 

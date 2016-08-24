@@ -50,7 +50,7 @@ describe SecretsClient do
         File.write("vaultpem", File.read(Bundler.root.join("test/fixtures/self_signed_testing.pem")))
         File.write("ca.crt", File.read(Bundler.root.join("test/fixtures/self_signed_testing.pem")))
         File.write("namespace", File.read(Bundler.root.join("test/fixtures/namespace")))
-        File.write("token", File.read(Bundler.root.join("test/fixtures/token")))
+        File.write("token", File.read(Bundler.root.join("test/fixtures/fake_token")))
         File.write('annotations', "secret/SECRET=this/is/very/hidden")
         test.call
       end
