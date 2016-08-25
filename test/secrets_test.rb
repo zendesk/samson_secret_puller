@@ -102,9 +102,10 @@ describe SecretsClient do
     end
 
     it 'ignores non-secrets' do
-      File.write('annotations', File.read('annotations') + "\n" + "other-annotation=this/is/not/hidden")
+      File.write('annotations', File.read('annotations') + "\n" + "OTHER=this/is/not/hidden")
       process
       assert File.exist?("SECRET")
+      refute File.exist?("OTHER")
     end
 
     it 'raises when no secrets were used' do
@@ -123,6 +124,19 @@ describe SecretsClient do
         to_return(status: 500)
       e = assert_raises(RuntimeError) { process }
       e.message.must_include("Could not POST https://foo.bar:8200/v1/auth/cert/login: 500 /")
+    end
+
+    describe 'CONSUL_URL' do
+      it 'creates a CONSUL_URL secret' do
+        process
+        File.read("CONSUL_URL").must_equal("http://10.10.10.10:8500")
+      end
+
+      it 'can be overwritten by the user' do
+        File.write('annotations', "secret/CONSUL_URL=this/is/very/hidden")
+        process
+        File.read('CONSUL_URL').must_equal 'foo'
+      end
     end
 
     describe 'HOST_IP' do
