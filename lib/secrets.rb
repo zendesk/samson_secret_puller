@@ -36,12 +36,18 @@ class SecretsClient
   end
 
   def write_secrets
+    # Write out the pod's status.hostIP as a secret
+    File.write("#{@output_path}/HOST_IP", host_ip)
+
+    # Write out the location of consul to simplify app logic
+    File.write("#{@output_path}/CONSUL_URL", "http://#{host_ip}:8500")
+
+    # Write out user defined secrets
     @secret_keys.each do |key, path|
       contents = read(path)
       File.write("#{@output_path}/#{key}", contents)
     end
-    # Write out the pod's status.hostIP as a secret
-    File.write("#{@output_path}/HOST_IP", host_ip)
+
     # notify primary container that it is now safe to read all secrets
     File.write("#{@output_path}/.done", Time.now.to_s)
   end
@@ -84,15 +90,17 @@ class SecretsClient
   end
 
   def host_ip
-    token = File.read(@serviceaccount_dir + '/token')
-    namespace = File.read(@serviceaccount_dir + '/namespace')
-    api_response = http_get(
-      @api_url + "/api/v1/namespaces/#{namespace}/pods",
-      headers: {"Authorization" => "Bearer #{token}"},
-      ca_file: "#{@serviceaccount_dir}/ca.crt"
-    )
-    api_response = JSON.parse(api_response, symbolize_names: true)
-    api_response[:items][0][:status][:hostIP].to_s
+    @host_ip ||= begin
+      token = File.read(@serviceaccount_dir + '/token')
+      namespace = File.read(@serviceaccount_dir + '/namespace')
+      api_response = http_get(
+        @api_url + "/api/v1/namespaces/#{namespace}/pods",
+        headers: {"Authorization" => "Bearer #{token}"},
+        ca_file: "#{@serviceaccount_dir}/ca.crt"
+      )
+      api_response = JSON.parse(api_response, symbolize_names: true)
+      api_response[:items][0][:status][:hostIP].to_s
+    end
   end
 
   def read(key)
