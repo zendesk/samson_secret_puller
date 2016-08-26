@@ -44,7 +44,7 @@ ENV['FOO'] -> read from /secrets/FOO or falls back to ENV['FOO']
 ```
 ... build ...
 docker build -t samson-secret-puller .
-docker tag -f samson-secret-puller docker-registry.zende.sk/samson-secret-puller:latest
+docker tag samson-secret-puller docker-registry.zende.sk/samson-secret-puller:latest
 docker push docker-registry.zende.sk/samson-secret-puller:latest
 ```
 
