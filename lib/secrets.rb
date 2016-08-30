@@ -9,17 +9,6 @@ Vault::Client.prepend(Module.new do
   end
 end)
 
-# fixed in vault gem 0.5.1 https://github.com/hashicorp/vault-ruby/pull/93
-if defined?(Vault::Secret)
-  Vault::Secret.class_eval do
-    def to_h
-      self.class.fields.each_with_object({}) do |(k, _), hash|
-        hash[k] = instance_variable_get(:"@#{k}")
-      end
-    end
-  end
-end
-
 class SecretsClient
   ENCODINGS = {"/" => "%2F"}.freeze
   CERT_AUTH_PATH = '/v1/auth/cert/login'.freeze

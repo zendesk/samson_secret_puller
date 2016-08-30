@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'vault', "0.5.0"
+gem 'vault', ">= 0.5.0"
 
 # test
 gem 'maxitest'
