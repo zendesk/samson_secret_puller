@@ -1,6 +1,25 @@
 require 'vault'
 require 'openssl'
 
+# fixed in vault server 0.6.2 https://github.com/hashicorp/vault/pull/1795
+Vault::Client.prepend(Module.new do
+  def success(response)
+    response.content_type = 'application/json' if response.body && response.body.start_with?('{', '[')
+    super
+  end
+end)
+
+# fixed in vault gem 0.5.1 https://github.com/hashicorp/vault-ruby/pull/93
+if defined?(Vault::Secret)
+  Vault::Secret.class_eval do
+    def to_h
+      self.class.fields.each_with_object({}) do |(k, _), hash|
+        hash[k] = instance_variable_get(:"@#{k}")
+      end
+    end
+  end
+end
+
 class SecretsClient
   ENCODINGS = {"/" => "%2F"}.freeze
   CERT_AUTH_PATH = '/v1/auth/cert/login'.freeze
