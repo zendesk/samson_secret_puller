@@ -15,6 +15,7 @@ class SecretsClient
   VAULT_SECRET_BACKEND = 'secret/'.freeze
   SAMSON_SECRET_NAMESPACE = 'apps/'.freeze
   KEY_PARTS = 4
+  LINK_LOCAL_IP = '169.254.1.1'.freeze # Kubernetes nodes are configured with this special link-local IP
 
   # auth against the server, set a token in the Vault obj
   def initialize(vault_address:, authfile_path:, ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:)
@@ -47,8 +48,11 @@ class SecretsClient
     # Write out the pod's status.hostIP as a secret
     File.write("#{@output_path}/HOST_IP", host_ip)
 
+    # Write out the pod's status.hostIP as a secret
+    File.write("#{@output_path}/LINK_LOCAL_IP", LINK_LOCAL_IP)
+
     # Write out the location of consul to simplify app logic
-    File.write("#{@output_path}/CONSUL_URL", "http://#{host_ip}:8500")
+    File.write("#{@output_path}/CONSUL_URL", "http://#{LINK_LOCAL_IP}:8500")
 
     # Write out user defined secrets
     @secret_keys.each do |key, path|

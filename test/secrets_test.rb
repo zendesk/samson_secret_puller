@@ -129,7 +129,7 @@ describe SecretsClient do
     describe 'CONSUL_URL' do
       it 'creates a CONSUL_URL secret' do
         process
-        File.read("CONSUL_URL").must_equal("http://10.10.10.10:8500")
+        File.read("CONSUL_URL").must_equal("http://#{SecretsClient::LINK_LOCAL_IP}:8500")
       end
 
       it 'can be overwritten by the user' do
