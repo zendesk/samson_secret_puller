@@ -156,6 +156,20 @@ describe SamsonSecretPuller do
     end
   end
 
+  describe '.delete' do
+    it "deletes secrets" do
+      SamsonSecretPuller.delete('FOO').must_equal 'bar'
+      SamsonSecretPuller.delete('FOO').must_equal nil
+    end
+  end
+
+  describe '.each_with_object' do
+    it "iterates" do
+      result = SamsonSecretPuller.each_with_object([]) { |(k, _), a| a << k }
+      result.must_equal SamsonSecretPuller.keys
+    end
+  end
+
   describe '.replace_ENV!' do
     it "replaces the ENV" do
       silence_warnings { SamsonSecretPuller.const_set(:Object, Class.new) }
