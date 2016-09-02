@@ -170,6 +170,13 @@ describe SamsonSecretPuller do
     end
   end
 
+  describe '.values_at' do
+    it "works" do
+      result = SamsonSecretPuller.values_at('FOO')
+      result.must_equal(['bar'])
+    end
+  end
+
   describe '.replace_ENV!' do
     it "replaces the ENV" do
       silence_warnings { SamsonSecretPuller.const_set(:Object, Class.new) }
