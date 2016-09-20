@@ -93,7 +93,11 @@ class SecretsClient
     http.use_ssl = (uri.scheme == 'https')
     http.ca_file = ca_file
     http.verify_mode = (@ssl_verify ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE)
-    response = http.request(req)
+    begin
+      response = http.request(req)
+    rescue Net::OpenTimeout
+      raise "Timeout connecting to #{uri.host} on #{uri.port}"
+    end
     if response.code.to_i == 200
       response.body
     else
