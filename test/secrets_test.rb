@@ -139,6 +139,14 @@ describe SecretsClient do
       end
     end
 
+    describe 'timeouts' do
+      it 'raises usefuly debugging info when a timeout is encountered' do
+        stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").to_raise(Net::OpenTimeout)
+        e = assert_raises(RuntimeError) { process }
+        e.message.must_equal("Timeout connecting to https://foo.bar/api/v1/namespaces/default/pods")
+      end
+    end
+
     describe 'HOST_IP' do
       it 'creates a HOST_IP secret' do
         process
