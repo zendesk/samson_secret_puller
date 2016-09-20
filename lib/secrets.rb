@@ -96,7 +96,7 @@ class SecretsClient
     begin
       response = http.request(req)
     rescue Net::OpenTimeout
-      raise "Timeout connecting to #{uri.to_s}"
+      raise "Timeout connecting to #{uri}"
     end
     if response.code.to_i == 200
       response.body
