@@ -140,10 +140,10 @@ describe SecretsClient do
     end
 
     describe 'timeouts' do
-      it 'times out with a get request' do
+      it 'raises usefuly debugging info when a timeout is encountered' do
         stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").to_raise(Net::OpenTimeout)
         e = assert_raises(RuntimeError) { process }
-        e.message.must_equal("Timeout connecting to foo.bar on 443")
+        e.message.must_equal("Timeout connecting to https://foo.bar/api/v1/namespaces/default/pods")
       end
     end
 
