@@ -6,6 +6,7 @@ SingleCov.setup :minitest
 require 'maxitest/autorun'
 require 'webmock/minitest'
 require 'tmpdir'
+require 'mocha/mini_test'
 
 def root
   Bundler.root.to_s
