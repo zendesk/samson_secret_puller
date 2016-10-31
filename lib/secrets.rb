@@ -163,6 +163,6 @@ class SecretsClient
   end
 
   def log(msg)
-    puts "#{Time.now.to_i}: #{msg}" unless ENV["testing"]
+    puts "#{Time.now}: #{msg}" unless ENV["testing"]
   end
 end

@@ -6,6 +6,7 @@ require_relative "../lib/secrets.rb"
 
 describe SecretsClient do
   ENV["KUBERNETES_PORT_443_TCP_ADDR"] = 'foo.bar'
+  ENV["testing"] = "true"
   def process
     old = $stdout
     $stdout = StringIO.new
@@ -45,7 +46,6 @@ describe SecretsClient do
   end
 
   around do |test|
-    ENV["testing"] = "true"
     Dir.mktmpdir do |dir|
       Dir.chdir(dir) do
         File.write("vaultpem", File.read(Bundler.root.join("test/fixtures/self_signed_testing.pem")))
