@@ -9,7 +9,10 @@ GEM
     hashdiff (0.3.0)
     maxitest (2.0.1)
       minitest (>= 5.0.0, < 5.10.0)
+    metaclass (0.0.4)
     minitest (5.9.0)
+    mocha (1.2.1)
+      metaclass (~> 0.0.1)
     parser (2.3.1.2)
       ast (~> 2.2)
     powerpack (0.1.1)
@@ -38,6 +41,7 @@ PLATFORMS
 DEPENDENCIES
   bump
   maxitest
+  mocha
   rack
   rake
   rubocop

@@ -42,6 +42,7 @@ class SecretsClient
 
     @secret_keys = secrets_from_annotations(annotations)
     raise "#{annotations} contains no secrets" if @secret_keys.empty?
+    log("secrets found: #{@secret_keys.join(",")}")
   end
 
   def write_secrets
@@ -56,11 +57,13 @@ class SecretsClient
 
     # Write out user defined secrets
     @secret_keys.each do |key, path|
+      log("writing secrets: #{key}")
       contents = read(path)
       File.write("#{@output_path}/#{key}", contents)
     end
 
     # notify primary container that it is now safe to read all secrets
+    log("all secrets written")
     File.write("#{@output_path}/.done", Time.now.to_s)
   end
 
@@ -157,5 +160,9 @@ class SecretsClient
     JSON.parse(response).fetch("auth").fetch("client_token")
   rescue OpenSSL::X509::CertificateError
     File.read(authfile_path)
+  end
+
+  def log(msg)
+    puts "#{Time.now}: #{msg}" unless ENV["testing"]
   end
 end

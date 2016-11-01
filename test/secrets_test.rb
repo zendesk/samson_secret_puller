@@ -6,6 +6,7 @@ require_relative "../lib/secrets.rb"
 
 describe SecretsClient do
   ENV["KUBERNETES_PORT_443_TCP_ADDR"] = 'foo.bar'
+  ENV["testing"] = "true"
   def process
     old = $stdout
     $stdout = StringIO.new
@@ -93,6 +94,13 @@ describe SecretsClient do
     it 'works' do
       process
       File.read("SECRET").must_equal("foo")
+    end
+
+    it 'logs' do
+      SecretsClient.any_instance.expects(:log).with('secrets found: SECRET,this/is/very/hidden')
+      SecretsClient.any_instance.expects(:log).with('writing secrets: SECRET')
+      SecretsClient.any_instance.expects(:log).with('all secrets written')
+      process
     end
 
     it 'ignores newline in key name' do
