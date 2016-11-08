@@ -1,8 +1,8 @@
 # ruby:2.3.1-alpine
-FROM ruby@sha256:4a8993318e41d8814ea6a30ca2eccf36078b59ed2ab2f9cf2b4be81331d8caa3
+FROM ruby@sha256:8d5ca285f1a24ed333aad70cfa54157f77ff130f810c91d5664e98a093d751bc
 
 RUN apk add --update --no-cache \
-  bash
+  bash curl elixir erlang-crypto
 
 RUN mkdir /app
 WORKDIR /app
@@ -22,6 +22,11 @@ ADD Rakefile .
 ADD .travis.yml .
 ADD .rubocop.yml .
 ADD test /app/test
+
+# clients
 ADD gem gem
+ADD elixir elixir
+
+RUN mix local.hex --force
 
 CMD bundle exec bin/secrets

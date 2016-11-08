@@ -13,6 +13,7 @@ task :test do
   sh "mtest test/secrets_test.rb"
   sh "mtest test/create_k8s_token_test.rb"
   sh "mtest gem/test/" # need to be separate runs so we do not pollute anything
+  sh "cd elixir && mix test"
 end
 
 desc "Rubocop"

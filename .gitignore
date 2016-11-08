@@ -1,6 +1,8 @@
 *.rbc
 /.config
 /coverage/
+/elixir/test/doc_secrets/
+/elixir/test/secrets/
 /InstalledFiles
 /pkg/
 /spec/reports/
