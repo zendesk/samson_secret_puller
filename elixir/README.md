@@ -25,3 +25,8 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
     end
     ```
 
+  3. Call `fetch_secrets!` to wait for the secrets to appear:
+
+    ```elixir
+    secrets = SamsonSecretPuller.fetch_secrets!
+    ```

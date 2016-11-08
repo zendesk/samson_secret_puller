@@ -2,7 +2,7 @@
 FROM ruby@sha256:8d5ca285f1a24ed333aad70cfa54157f77ff130f810c91d5664e98a093d751bc
 
 RUN apk add --update --no-cache \
-  bash curl elixir
+  bash curl elixir erlang-crypto
 
 RUN mkdir /app
 WORKDIR /app
@@ -26,5 +26,7 @@ ADD test /app/test
 # clients
 ADD gem gem
 ADD elixir elixir
+
+RUN mix local.hex --force
 
 CMD bundle exec bin/secrets
