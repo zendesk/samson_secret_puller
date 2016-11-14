@@ -134,6 +134,19 @@ describe SecretsClient do
       e.message.must_include("Could not POST https://foo.bar:8200/v1/auth/cert/login: 500 /")
     end
 
+    it 'raises useful debugging info when a timeout is encountered' do
+      stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").to_raise(Net::OpenTimeout)
+      e = assert_raises(RuntimeError) { process }
+      e.message.must_equal("Timeout connecting to https://foo.bar/api/v1/namespaces/default/pods")
+    end
+
+    it 'raises useful debugging info when reading keys fails' do
+      stub_request(:get, url).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
+      e = assert_raises(RuntimeError) { process }
+      e.message.must_include("Error reading key this/is/very/hidden")
+      e.message.must_include("The Vault server at `http://foo.com'")
+    end
+
     describe 'CONSUL_URL' do
       it 'creates a CONSUL_URL secret' do
         process
@@ -144,14 +157,6 @@ describe SecretsClient do
         File.write('annotations', "secret/CONSUL_URL=this/is/very/hidden")
         process
         File.read('CONSUL_URL').must_equal 'foo'
-      end
-    end
-
-    describe 'timeouts' do
-      it 'raises usefuly debugging info when a timeout is encountered' do
-        stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").to_raise(Net::OpenTimeout)
-        e = assert_raises(RuntimeError) { process }
-        e.message.must_equal("Timeout connecting to https://foo.bar/api/v1/namespaces/default/pods")
       end
     end
 

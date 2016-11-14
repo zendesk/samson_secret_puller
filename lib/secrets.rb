@@ -124,7 +124,13 @@ class SecretsClient
 
   def read(key)
     key = normalize_key(key)
-    result = Vault.logical.read(vault_path(key))
+    begin
+      result = Vault.logical.read(vault_path(key))
+    rescue Vault::HTTPClientError
+      $!.message.prepend "Error reading key #{key}\n"
+      raise
+    end
+
     if !result.respond_to?(:data) || !result.data || !result.data.is_a?(Hash)
       raise "Bad results returned from vault server for #{key}: #{result.inspect}"
     end
