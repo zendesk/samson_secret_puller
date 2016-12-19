@@ -36,12 +36,7 @@ module SamsonSecretPuller
     def secrets
       @secrets ||= begin
         secrets = ENV.to_h
-
-        if File.exist?(FOLDER)
-          wait_for_secrets_to_appear
-          merge_secrets(secrets)
-        end
-
+        merge_secrets(secrets) if File.exist?(FOLDER)
         secrets
       end
     end
@@ -51,20 +46,6 @@ module SamsonSecretPuller
         name = File.basename(file)
         next if name.start_with?(".") # ignore .done and maybe others
         secrets[name] = File.read(file).strip
-      end
-    end
-
-    def wait_for_secrets_to_appear
-      start = Time.now
-      done_file = "#{FOLDER}/.done"
-      # secrets should appear in that folder any second now
-      until File.exist?(done_file)
-        if Time.now > start + TIMEOUT
-          raise TimeoutError, "Waited #{TIMEOUT} seconds for #{done_file} to appear."
-        else
-          warn 'waiting for secrets to appear'
-          sleep 0.1
-        end
       end
     end
   end
