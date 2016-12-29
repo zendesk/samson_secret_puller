@@ -82,30 +82,6 @@ describe SamsonSecretPuller do
     SamsonSecretPuller['HOME'].must_equal 'bar'
   end
 
-  it "waits for secrets to appear" do
-    File.unlink('secrets/.done')
-    Thread.new do
-      sleep 0.3
-      File.write('secrets/FOO', 'YEAH')
-      File.write('secrets/.done', '')
-    end
-    result = capture_stderr do
-      SamsonSecretPuller['FOO'].must_equal 'YEAH'
-    end
-    result.must_include "waiting for secrets to appear\nwaiting for secrets to appear\n"
-  end
-
-  it "fails when secrets never finish" do
-    change_constant :TIMEOUT, 0.2 do
-      File.unlink('secrets/.done')
-      assert_raises SamsonSecretPuller::TimeoutError do
-        capture_stderr do
-          SamsonSecretPuller['FOO']
-        end
-      end
-    end
-  end
-
   describe '.fetch' do
     it "fetches secrets" do
       SamsonSecretPuller.fetch('FOO').must_equal 'bar'

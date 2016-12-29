@@ -1,6 +1,6 @@
 # Secret puller [![Build Status](https://travis-ci.org/zendesk/samson_secret_puller.svg?branch=master)](https://travis-ci.org/zendesk/samson_secret_puller)
 
-Application to run in a kubernetes sidecar app with used in [samson](https://github.com/zendesk/samson),
+Application to run in a kubernetes init container used in [samson](https://github.com/zendesk/samson),
 to publish secrets and configs to a containerized application.
 
 Samson will need the following ENV vars set:
@@ -30,7 +30,7 @@ gem 'samson_secret_puller'
 
 require 'samson_secret_puller'
 
-SamsonSecretPuller.replace_ENV! # waits for /secret/.done to show up
+SamsonSecretPuller.replace_ENV!
 
 ENV['FOO'] -> read from /secrets/FOO or falls back to ENV['FOO']
 ```
@@ -43,9 +43,9 @@ ENV['FOO'] -> read from /secrets/FOO or falls back to ENV['FOO']
 
 ```
 ... build ...
-docker build -t samson-secret-puller .
-docker tag samson-secret-puller docker-registry.zende.sk/secret_sidecar:latest
-docker push docker-registry.zende.sk/secret_sidecar:latest
+docker build -t zendesk/samson_secret_puller .
+docker tag zendesk/samson_secret_puller zendesk/samson_secret_puller:latest
+docker push zendesk/samson_secret_puller:latest
 ```
 
 
