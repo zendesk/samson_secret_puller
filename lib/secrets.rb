@@ -125,7 +125,7 @@ class SecretsClient
   def read(key)
     key = normalize_key(key)
     begin
-      result = Vault.logical.read(vault_path(key))
+      result = with_retries { Vault.logical.read(vault_path(key)) }
     rescue Vault::HTTPClientError
       $!.message.prepend "Error reading key #{key}\n"
       raise
@@ -170,5 +170,9 @@ class SecretsClient
 
   def log(msg)
     puts "#{Time.now}: #{msg}" unless ENV["testing"]
+  end
+
+  def with_retries(&block)
+    Vault.with_retries(Vault::HTTPConnectionError, attempts: 3, &block)
   end
 end
