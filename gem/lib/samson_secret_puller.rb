@@ -1,3 +1,5 @@
+require 'forwardable'
+
 module SamsonSecretPuller
   FOLDER = '/secrets'.freeze
   TIMEOUT = 60
