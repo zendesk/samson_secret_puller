@@ -161,4 +161,11 @@ describe SamsonSecretPuller do
       SamsonSecretPuller::Object::ENV["FOO"].must_equal "bar"
     end
   end
+
+  it "can load without bundler" do
+    file = Bundler.root.join('gem/lib/samson_secret_puller')
+    Bundler.with_clean_env do
+      `ruby -r#{file} -e 'puts 1' 2>&1`.must_equal "1\n"
+    end
+  end
 end
