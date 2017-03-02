@@ -153,6 +153,13 @@ describe SamsonSecretPuller do
     end
   end
 
+  describe '.reject / .select' do
+    it "works" do
+      SamsonSecretPuller.select { |k, _| k == 'FOO' }.must_equal 'FOO' => 'bar'
+      SamsonSecretPuller.reject { |k, _| k != 'FOO' }.must_equal 'FOO' => 'bar'
+    end
+  end
+
   describe '.replace_ENV!' do
     it "replaces the ENV" do
       silence_warnings { SamsonSecretPuller.const_set(:Object, Class.new) }
