@@ -18,12 +18,16 @@ module SamsonSecretPuller
       def_delegator :secrets, method
     end
 
-    def []=(key, value)
-      ENV[key] = secrets[key] = value
+    def to_h
+      secrets.dup
     end
 
-    def to_h
-      secrets
+    def to_hash
+      secrets.dup
+    end
+
+    def []=(key, value)
+      ENV[key] = secrets[key] = value
     end
 
     # When we run in kubernetes we need to read secrets from ENV and secret storage
