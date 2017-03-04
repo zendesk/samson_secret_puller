@@ -113,6 +113,22 @@ describe SamsonSecretPuller do
     it "generates a complete hash" do
       SamsonSecretPuller.to_h["FOO"].must_equal "bar"
     end
+
+    it "generates a copy" do
+      SamsonSecretPuller.to_h["FOO"] = "baz"
+      SamsonSecretPuller.to_h["FOO"].must_equal "bar"
+    end
+  end
+
+  describe '.to_hash' do
+    it "generates a complete hash" do
+      SamsonSecretPuller.to_hash["FOO"].must_equal "bar"
+    end
+
+    it "generates a copy" do
+      SamsonSecretPuller.to_hash["FOO"] = "baz"
+      SamsonSecretPuller.to_hash["FOO"].must_equal "bar"
+    end
   end
 
   describe '[]=' do
