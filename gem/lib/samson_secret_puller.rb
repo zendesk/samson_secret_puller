@@ -2,10 +2,6 @@ require 'forwardable'
 
 module SamsonSecretPuller
   FOLDER = '/secrets'.freeze
-  TIMEOUT = 60
-
-  class TimeoutError < StandardError
-  end
 
   ENV = ENV # store a copy since we might replace ENV on Object
 
