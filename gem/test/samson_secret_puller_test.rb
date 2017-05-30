@@ -120,6 +120,29 @@ describe SamsonSecretPuller do
     end
   end
 
+  describe '.replace' do
+    it "replaces secrets but does not expose them to ENV since users most likely use .to_h for the input" do
+      begin
+        old = ENV.to_h
+        with_env "BAR" => "baz" do
+          SamsonSecretPuller.replace("FOO" => "BAR", "BAR" => "update")
+          SamsonSecretPuller["FOO"].must_equal "BAR"
+          SamsonSecretPuller["BAR"].must_equal "update"
+          ENV["FOO"].must_equal nil
+          ENV["BAR"].must_equal "update"
+        end
+      ensure
+        ENV.replace(old)
+      end
+    end
+  end
+
+  describe '.to_a' do
+    it "works" do
+      SamsonSecretPuller.to_a.must_include ["RBENV_VERSION", "2.2.4"]
+    end
+  end
+
   describe '.to_hash' do
     it "generates a complete hash" do
       SamsonSecretPuller.to_hash["FOO"].must_equal "bar"
@@ -137,6 +160,18 @@ describe SamsonSecretPuller do
       ENV["BAR"].must_equal 'baz'
       SamsonSecretPuller["BAR"].must_equal 'baz'
     end
+
+    it "deletes when setting nil" do
+      SamsonSecretPuller["BAR"] = nil
+      ENV.key?("BAR").must_equal false
+      SamsonSecretPuller.key?("BAR").must_equal false
+    end
+
+    it "does not write secrets to disk/process" do
+      SamsonSecretPuller["FOO"] = "baz"
+      SamsonSecretPuller["FOO"].must_equal "baz"
+      ENV["FOO"].must_be_nil
+    end
   end
 
   describe '.each' do
@@ -149,9 +184,11 @@ describe SamsonSecretPuller do
   end
 
   describe '.delete' do
-    it "deletes secrets" do
+    it "deletes secrets and env" do
+      ENV['FOO'] = 'bar'
       SamsonSecretPuller.delete('FOO').must_equal 'bar'
-      SamsonSecretPuller.delete('FOO').must_equal nil
+      SamsonSecretPuller.delete('FOO').must_be_nil
+      ENV['FOO'].must_be_nil
     end
   end
 
