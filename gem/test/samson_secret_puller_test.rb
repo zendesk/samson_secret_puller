@@ -139,7 +139,7 @@ describe SamsonSecretPuller do
 
   describe '.to_a' do
     it "works" do
-      SamsonSecretPuller.to_a.must_include ["RBENV_VERSION", "2.2.4"]
+      SamsonSecretPuller.to_a.must_include ["FOO", "bar"]
     end
   end
 
