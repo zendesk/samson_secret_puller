@@ -38,7 +38,7 @@ describe "CLI" do
         KUBERNETES_PORT_443_TCP_ADDR: 'localhost:8211'
       ) do
         sh "#{Bundler.root}/bin/secrets"
-        File.read('BAR').must_equal('foo')
+        File.read('BAR').must_equal('foo') # secret was written out
       end
     end
   end

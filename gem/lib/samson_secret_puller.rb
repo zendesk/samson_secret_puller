@@ -8,8 +8,8 @@ module SamsonSecretPuller
   class << self
     extend Forwardable
     [
-      :[], :fetch, :keys, :each, :has_key?, :key?, :include?, :delete,
-      :each_with_object, :values_at, :reject, :select
+      :[], :fetch, :keys, :each, :has_key?, :key?, :include?,
+      :each_with_object, :values_at, :reject, :select, :to_a
     ].each do |method|
       def_delegator :secrets, method
     end
@@ -23,7 +23,22 @@ module SamsonSecretPuller
     end
 
     def []=(key, value)
-      ENV[key] = secrets[key] = value
+      if value.nil?
+        delete key
+      elsif secrets && @secret_keys.include?(key)
+        secrets[key] = value
+      else
+        ENV[key] = secrets[key] = value
+      end
+    end
+
+    def delete(key)
+      secrets.delete(key)
+      ENV.delete(key)
+    end
+
+    def replace(other)
+      (secrets.keys + other.keys).uniq.each { |k| self[k] = other[k] }
     end
 
     # When we run in kubernetes we need to read secrets from ENV and secret storage
@@ -40,17 +55,20 @@ module SamsonSecretPuller
 
     def secrets
       @secrets ||= begin
-        secrets = ENV.to_h
-        merge_secrets(secrets) if File.exist?(FOLDER)
-        secrets
+        combined = ENV.to_h
+        secrets = read_secrets
+        @secret_keys = secrets.keys
+        combined.merge!(secrets)
+        combined
       end
     end
 
-    def merge_secrets(secrets)
-      Dir.glob("#{FOLDER}/*").each do |file|
+    def read_secrets
+      return {} unless File.exist?(FOLDER)
+      Dir.glob("#{FOLDER}/*").each_with_object({}) do |file, all|
         name = File.basename(file)
         next if name.start_with?(".") # ignore .done and maybe others
-        secrets[name] = File.read(file).strip
+        all[name] = File.read(file).strip
       end
     end
   end
