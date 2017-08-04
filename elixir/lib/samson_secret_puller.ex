@@ -25,7 +25,7 @@ defmodule SamsonSecretPuller do
   ## Examples
 
       iex> SamsonSecretPuller.fetch_secrets!("./test/doc_secrets")
-      [MYSQL_USER: "admin", MYSQL_PASS: "password"]
+      [MYSQL_PASS: "password", MYSQL_USER: "admin"]
 
   """
   @spec fetch_secrets!(Path.t) :: Keyword.t | no_return
