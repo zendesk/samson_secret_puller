@@ -55,11 +55,22 @@ class SecretsClient
     # Write out the location of consul to simplify app logic
     File.write("#{@output_path}/CONSUL_URL", "http://#{LINK_LOCAL_IP}:8500")
 
+    # Read secrets and report all errors as one
+    errors = []
+    secrets = @secret_keys.map do |key, path|
+      begin
+        [key, read_from_vault(path)]
+      rescue
+        errors << $!
+      end
+    end
+
+    present_errors(errors)
+
     # Write out user defined secrets
-    @secret_keys.each do |key, path|
+    secrets.each do |key, secret|
+      File.write("#{@output_path}/#{key}", secret)
       log("writing secrets: #{key}")
-      contents = read(path)
-      File.write("#{@output_path}/#{key}", contents)
     end
 
     # notify primary container that it is now safe to read all secrets
@@ -68,6 +79,16 @@ class SecretsClient
   end
 
   private
+
+  def present_errors(errors)
+    if errors.size == 1
+      # regular error display with full backtrace
+      raise errors.first
+    elsif errors.size > 1
+      # list all errors so users can fix multiple issues at once
+      raise "Errors reading secrets:\n#{errors.map { |e| "#{e.class}: #{e.message}" }.join("\n")}"
+    end
+  end
 
   def http_post(url, pem:)
     pem_contents = File.read(pem)
@@ -122,7 +143,7 @@ class SecretsClient
     end
   end
 
-  def read(key)
+  def read_from_vault(key)
     key = normalize_key(key)
     begin
       result = with_retries { Vault.logical.read(vault_path(key)) }
@@ -134,6 +155,7 @@ class SecretsClient
     if !result.respond_to?(:data) || !result.data || !result.data.is_a?(Hash)
       raise "Bad results returned from vault server for #{key}: #{result.inspect}"
     end
+
     result.data.fetch(:vault)
   end
 
