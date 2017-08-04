@@ -1,8 +1,6 @@
 defmodule SamsonSecretPullerTest do
   use ExUnit.Case
 
-  import ExUnit.CaptureIO
-
   doctest SamsonSecretPuller
 
   setup do
