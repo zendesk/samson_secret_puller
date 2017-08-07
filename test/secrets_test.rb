@@ -4,9 +4,10 @@ SingleCov.covered!
 
 require_relative "../lib/secrets.rb"
 
+ENV["KUBERNETES_PORT_443_TCP_ADDR"] = 'foo.bar'
+ENV["testing"] = "true"
+
 describe SecretsClient do
-  ENV["KUBERNETES_PORT_443_TCP_ADDR"] = 'foo.bar'
-  ENV["testing"] = "true"
   def process
     old = $stdout
     $stdout = StringIO.new
@@ -145,6 +146,16 @@ describe SecretsClient do
       e = assert_raises(RuntimeError) { process }
       e.message.must_include("Error reading key this/is/very/hidden")
       e.message.must_include("The Vault server at `http://foo.com'")
+    end
+
+    it 'raises useful debugging info when multiple keys fail' do
+      File.write('annotations', "secret/SECRET=this/is/very/hidden\nsecret/SECRE2=this/is/very/secret")
+      stub_request(:get, url).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
+      url2 = url.sub('very%2Fhidden', 'very%2Fsecret')
+      stub_request(:get, url2).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
+      e = assert_raises(RuntimeError) { process }
+      e.message.must_include("Error reading key this/is/very/hidden")
+      e.message.must_include("Error reading key this/is/very/secret")
     end
 
     describe 'CONSUL_URL' do
