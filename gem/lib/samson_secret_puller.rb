@@ -17,10 +17,8 @@ module SamsonSecretPuller
     def to_h
       secrets.dup
     end
-
-    def to_hash
-      secrets.dup
-    end
+    alias to_hash to_h
+    alias dup     to_h
 
     def []=(key, value)
       if value.nil?
