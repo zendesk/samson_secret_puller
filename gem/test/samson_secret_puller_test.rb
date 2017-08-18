@@ -154,6 +154,18 @@ describe SamsonSecretPuller do
     end
   end
 
+  describe '.dup' do
+    it "generates a complete hash" do
+      SamsonSecretPuller.dup["FOO"].must_equal "bar"
+    end
+
+    it "generates a copy" do
+      new_version = SamsonSecretPuller.dup
+      new_version["FOO"] = "baz"
+      SamsonSecretPuller["FOO"].must_equal "bar"
+    end
+  end
+
   describe '[]=' do
     it "writes into the environment and secrets" do
       SamsonSecretPuller["BAR"] = 'baz'
