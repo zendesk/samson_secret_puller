@@ -1,12 +1,13 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    addressable (2.4.0)
+    addressable (2.5.2)
+      public_suffix (>= 2.0.2, < 4.0)
     ast (2.2.0)
     bump (0.5.3)
     crack (0.4.3)
       safe_yaml (~> 1.0.0)
-    hashdiff (0.3.0)
+    hashdiff (0.3.7)
     maxitest (2.0.1)
       minitest (>= 5.0.0, < 5.10.0)
     metaclass (0.0.4)
@@ -16,6 +17,7 @@ GEM
     parser (2.3.1.2)
       ast (~> 2.2)
     powerpack (0.1.1)
+    public_suffix (3.0.0)
     rack (1.6.4)
     rainbow (2.1.0)
     rake (10.4.2)
@@ -30,7 +32,7 @@ GEM
     single_cov (0.4.1)
     unicode-display_width (1.0.5)
     vault (0.10.1)
-    webmock (2.0.3)
+    webmock (3.1.0)
       addressable (>= 2.3.6)
       crack (>= 0.3.2)
       hashdiff
