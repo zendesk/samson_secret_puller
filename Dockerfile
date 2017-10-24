@@ -1,5 +1,5 @@
-# ruby:2.3.1-alpine
-FROM ruby@sha256:8d5ca285f1a24ed333aad70cfa54157f77ff130f810c91d5664e98a093d751bc
+# ruby:2.4.1-alpine
+FROM ruby@sha256:502ebe671776e96520a01cecad973a1a78a749f6408a48f840bada7a306bc433
 
 RUN apk add --update --no-cache \
   bash curl elixir erlang-crypto
