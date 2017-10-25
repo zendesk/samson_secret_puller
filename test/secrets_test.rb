@@ -86,7 +86,7 @@ describe SecretsClient do
 
   describe "#process" do
     let(:reply) { {data: {vault: 'foo'}}.to_json }
-    let(:url) { 'https://foo.bar:8200/v1/secret%2Fapps%2Fthis%2Fis%2Fvery%2Fhidden' }
+    let(:url) { 'https://foo.bar:8200/v1/secret/apps/this/is/very/hidden' }
 
     before do
       stub_request(:get, url).to_return(response_body(reply))
@@ -151,7 +151,7 @@ describe SecretsClient do
     it 'raises useful debugging info when multiple keys fail' do
       File.write('annotations', "secret/SECRET=this/is/very/hidden\nsecret/SECRE2=this/is/very/secret")
       stub_request(:get, url).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
-      url2 = url.sub('very%2Fhidden', 'very%2Fsecret')
+      url2 = url.sub!('very/hidden', 'very/secret') || raise
       stub_request(:get, url2).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
       e = assert_raises(RuntimeError) { process }
       e.message.must_include("Error reading key this/is/very/hidden")

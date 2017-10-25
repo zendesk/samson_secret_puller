@@ -29,7 +29,7 @@ GEM
     safe_yaml (1.0.4)
     single_cov (0.4.1)
     unicode-display_width (1.0.5)
-    vault (0.5.0)
+    vault (0.10.1)
     webmock (2.0.3)
       addressable (>= 2.3.6)
       crack (>= 0.3.2)
@@ -50,4 +50,4 @@ DEPENDENCIES
   webmock
 
 BUNDLED WITH
-   1.12.5
+   1.15.4
