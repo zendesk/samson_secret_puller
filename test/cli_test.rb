@@ -21,7 +21,7 @@ describe "CLI" do
 
     replies = {
       '/v1/auth/cert/login' => {auth: {client_token: 'sometoken'}},
-      '/v1/secret%2Fapps%2Ffoo%2Fbar%2Fbaz%2Fbam' => {data: {vault: 'foo'}},
+      '/v1/secret/apps/foo/bar/baz/bam' => {data: {vault: 'foo'}},
       '/api/v1/namespaces/default/pods' => {items: [{status: {hostIP: "10.10.10.10"}}]}
     }
 
