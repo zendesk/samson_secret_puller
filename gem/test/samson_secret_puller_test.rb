@@ -64,7 +64,7 @@ describe SamsonSecretPuller do
   end
 
   it "fails to read secrets" do
-    SamsonSecretPuller['FOO2'].must_equal nil
+    SamsonSecretPuller['FOO2'].must_be_nil
   end
 
   it "falls back to ENV" do
@@ -74,7 +74,7 @@ describe SamsonSecretPuller do
   end
 
   it "ignores .done" do
-    SamsonSecretPuller['.done'].must_equal nil
+    SamsonSecretPuller['.done'].must_be_nil
   end
 
   it "overrides ENV values" do
@@ -128,7 +128,7 @@ describe SamsonSecretPuller do
           SamsonSecretPuller.replace("FOO" => "BAR", "BAR" => "update")
           SamsonSecretPuller["FOO"].must_equal "BAR"
           SamsonSecretPuller["BAR"].must_equal "update"
-          ENV["FOO"].must_equal nil
+          ENV["FOO"].must_be_nil
           ENV["BAR"].must_equal "update"
         end
       ensure
@@ -221,7 +221,7 @@ describe SamsonSecretPuller do
   describe '.reject / .select' do
     it "works" do
       SamsonSecretPuller.select { |k, _| k == 'FOO' }.must_equal 'FOO' => 'bar'
-      SamsonSecretPuller.reject { |k, _| k != 'FOO' }.must_equal 'FOO' => 'bar'
+      SamsonSecretPuller.reject { |k, _| k != 'FOO' }.must_equal 'FOO' => 'bar' # rubocop:disable Style/InverseMethods
     end
   end
 

@@ -59,10 +59,9 @@ class FakeServer
     Timeout.timeout(10) do
       loop do
         begin
-          socket = TCPSocket.new('localhost', @port)
-          socket.close if socket
-          return
-        rescue Errno::ECONNREFUSED
+          TCPSocket.new('localhost', @port)&.close
+          break
+        rescue Errno::ECONNREFUSED, Errno::EADDRNOTAVAIL
         end
       end
     end
@@ -78,6 +77,6 @@ class FakeServer
   end
 
   def shutdown
-    @server.shutdown if @server
+    @server&.shutdown
   end
 end

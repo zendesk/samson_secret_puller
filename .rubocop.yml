@@ -1,10 +1,17 @@
+AllCops:
+  DisplayCopNames: true
+  TargetRubyVersion: 2.4
+  UseCache: false
+  Exclude:
+    - vendor/**/*
+
 LineLength:
   Max: 120
 
 ClassLength:
   Enabled: false
 
-Style/CommentIndentation:
+Layout/CommentIndentation:
   Enabled: false
 
 Style/StringLiterals:
@@ -16,7 +23,7 @@ HashSyntax:
 Style/SignalException:
   Enabled: false
 
-Style/SpaceInsideHashLiteralBraces:
+Layout/SpaceInsideHashLiteralBraces:
   Enabled: false
 
 Lint/AmbiguousOperator:
@@ -28,17 +35,14 @@ Style/Lambda:
 Style/SpecialGlobalVars:
   Enabled: false
 
-Metrics/MethodLength:
-  Enabled: false
-
-Metrics/AbcSize:
+Metrics:
   Enabled: false
 
 Style/WordArray:
   Enabled: false
 
 Lint/EndAlignment:
-  AlignWith: variable
+  EnforcedStyleAlignWith: variable
 
 Style/StringLiteralsInInterpolation:
   Enabled: false
@@ -46,25 +50,16 @@ Style/StringLiteralsInInterpolation:
 Style/NumericLiterals:
   Enabled: false
 
-Style/FirstParameterIndentation:
+Layout/FirstParameterIndentation:
   Enabled: false
 
-Style/IndentHash:
+Layout/IndentHash:
   Enabled: false
 
-Style/AlignParameters:
+Layout/AlignParameters:
   EnforcedStyle: with_fixed_indentation
 
-Style/MultilineOperationIndentation:
-  Enabled: false
-
-Metrics/ModuleLength:
-  Enabled: false
-
-Metrics/PerceivedComplexity:
-  Enabled: false
-
-Metrics/CyclomaticComplexity:
+Layout/MultilineOperationIndentation:
   Enabled: false
 
 Style/DoubleNegation:
@@ -73,16 +68,13 @@ Style/DoubleNegation:
 Style/Documentation:
   Enabled: false
 
-Metrics/CyclomaticComplexity:
-  Enabled: false
-
-Style/MultilineMethodCallIndentation:
+Layout/MultilineMethodCallIndentation:
   Enabled: false
 
 Lint/AmbiguousRegexpLiteral:
   Enabled: false
 
-Style/DotPosition:
+Layout/DotPosition:
   EnforcedStyle: trailing
 
 Style/ClassAndModuleChildren:
@@ -111,9 +103,6 @@ Style/Semicolon:
 Style/GuardClause:
   Enabled: false
 
-Metrics/ParameterLists:
-  Enabled: false
-
 Lint/AssignmentInCondition:
   Enabled: false
 
@@ -138,7 +127,8 @@ Style/FrozenStringLiteralComment:
 Lint/HandleExceptions:
   Enabled: false
 
-AllCops:
-  TargetRubyVersion: 2.3
-  Exclude:
-    - vendor/**/*
+Bundler/OrderedGems:
+  Enabled: false
+
+Style/SymbolArray:
+  Enabled: false
