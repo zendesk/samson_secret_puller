@@ -39,15 +39,11 @@ ENV['FOO'] -> read from /secrets/FOO or falls back to ENV['FOO']
 
 `bundle && rake`
 
-### Build
+### Release to docker hub
 
 ```
-... build ...
-docker build -t zendesk/samson_secret_puller .
-docker tag zendesk/samson_secret_puller zendesk/samson_secret_puller:latest
-docker push zendesk/samson_secret_puller:latest
+rake release
 ```
-
 
 ### Gem
 
