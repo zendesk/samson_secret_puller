@@ -58,13 +58,11 @@ class SecretsClient
   end
 
   def write_secrets
-    # Write out the pod's status.hostIP as a secret
-    File.write("#{@output_path}/HOST_IP", host_ip)
-
-    # Write out the pod's status.hostIP as a secret
+    # TODO: remove
     File.write("#{@output_path}/LINK_LOCAL_IP", LINK_LOCAL_IP)
 
     # Write out the location of consul to simplify app logic
+    # TODO: remove
     File.write("#{@output_path}/CONSUL_URL", "http://#{LINK_LOCAL_IP}:8500")
 
     # Read secrets and report all errors as one
@@ -77,7 +75,7 @@ class SecretsClient
       end
     end
 
-    present_errors(errors)
+    raise_errors errors
 
     # Write out user defined secrets
     secrets.each do |key, secret|
@@ -91,7 +89,7 @@ class SecretsClient
 
   private
 
-  def present_errors(errors)
+  def raise_errors(errors)
     if errors.size == 1
       # regular error display with full backtrace
       raise errors.first
@@ -101,41 +99,8 @@ class SecretsClient
     end
   end
 
-  def http_get(url, headers:, ca_file:)
-    uri = URI.parse(url)
-    req = Net::HTTP::Get.new(uri.path)
-    headers.each { |k, v| req.add_field(k, v) }
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = (uri.scheme == 'https')
-    http.ca_file = ca_file
-    http.verify_mode = (@ssl_verify ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE)
-    begin
-      response = http.request(req)
-    rescue Net::OpenTimeout
-      raise "Timeout connecting to #{uri}"
-    end
-    if response.code.to_i == 200
-      response.body
-    else
-      raise "Could not GET #{url}: #{response.code} / #{response.body}"
-    end
-  end
-
   def serviceaccount_token
     @serviceaccount_token ||= File.read(@serviceaccount_dir + '/token')
-  end
-
-  def host_ip
-    @host_ip ||= begin
-      namespace = File.read(@serviceaccount_dir + '/namespace')
-      api_response = http_get(
-        @api_url + "/api/v1/namespaces/#{namespace}/pods",
-        headers: {"Authorization" => "Bearer #{serviceaccount_token}"},
-        ca_file: "#{@serviceaccount_dir}/ca.crt"
-      )
-      api_response = JSON.parse(api_response, symbolize_names: true)
-      api_response[:items][0][:status][:hostIP].to_s
-    end
   end
 
   def read_from_vault(key)

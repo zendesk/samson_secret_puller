@@ -55,12 +55,8 @@ describe SecretsClient do
     logger.stubs(:info)
     stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").
       to_return(body: auth_reply)
-    stub_request(:post, "https://foo.bar:8200/v1/auth/kubernetes/login").
-      to_return(body: auth_reply)
     stub_request(:get, "https://foo.bar:8200/v1/auth/token/lookup-self").
       to_return(body: token_reply)
-    stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").
-      to_return(body: status_api_body)
   end
 
   around do |test|
@@ -68,7 +64,6 @@ describe SecretsClient do
       Dir.chdir(dir) do
         File.write("vaultpem", File.read(Bundler.root.join("test/fixtures/self_signed_testing.pem")))
         File.write("ca.crt", File.read(Bundler.root.join("test/fixtures/self_signed_testing.pem")))
-        File.write("namespace", File.read(Bundler.root.join("test/fixtures/namespace")))
         File.write("token", File.read(Bundler.root.join("test/fixtures/fake_token")))
         File.write('annotations', "secret/SECRET=\"this/is/very/hidden\"")
         test.call
@@ -86,6 +81,8 @@ describe SecretsClient do
     end
 
     it "works with a serviceaccount" do
+      stub_request(:post, "https://foo.bar:8200/v1/auth/kubernetes/login").
+        to_return(body: auth_reply)
       serviceaccount_client
     end
 
@@ -185,12 +182,6 @@ describe SecretsClient do
       e.message.must_include("The Vault server at `https://foo.bar:8200'")
     end
 
-    it 'raises useful debugging info when a timeout is encountered' do
-      stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").to_raise(Net::OpenTimeout)
-      e = assert_raises(RuntimeError) { process }
-      e.message.must_equal("Timeout connecting to https://foo.bar/api/v1/namespaces/default/pods")
-    end
-
     it 'raises useful debugging info when reading keys fails' do
       stub_request(:get, url).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
       e = assert_raises(RuntimeError) { process }
@@ -208,6 +199,13 @@ describe SecretsClient do
       e.message.must_include("Error reading key this/is/very/secret")
     end
 
+    describe 'LINK_LOCAL_IP' do
+      it 'creates a LINK_LOCAL_IP secret' do
+        process
+        File.read("LINK_LOCAL_IP").must_equal(SecretsClient::LINK_LOCAL_IP)
+      end
+    end
+
     describe 'CONSUL_URL' do
       it 'creates a CONSUL_URL secret' do
         process
@@ -218,20 +216,6 @@ describe SecretsClient do
         File.write('annotations', "secret/CONSUL_URL=\"this/is/very/hidden\"")
         process
         File.read('CONSUL_URL').must_equal 'foo'
-      end
-    end
-
-    describe 'HOST_IP' do
-      it 'creates a HOST_IP secret' do
-        process
-        File.read("HOST_IP").must_equal("10.10.10.10")
-      end
-
-      it "raises when host ip api call fails" do
-        stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").
-          to_return(status: 500)
-        e = assert_raises(RuntimeError) { process }
-        e.message.must_include("Could not GET https://foo.bar/api/v1/namespaces/default/pod")
       end
     end
   end
