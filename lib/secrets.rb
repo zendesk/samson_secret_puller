@@ -168,7 +168,7 @@ class SecretsClient
   end
 
   def vault_path(key)
-    (VAULT_SECRET_BACKEND + SAMSON_SECRET_NAMESPACE + key).delete('"')
+    VAULT_SECRET_BACKEND + SAMSON_SECRET_NAMESPACE + key
   end
 
   def secrets_from_annotations(annotations)
