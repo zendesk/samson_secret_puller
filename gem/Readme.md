@@ -9,3 +9,10 @@ SECRETS = SamsonSecretPuller
 secret = SECRETS['MY_FANCY_SECRET']
 secret = SECRETS.fetch('MY_FANCY_SECRET')
 ```
+
+## Release a new version
+
+```
+rake bump:patch
+rake release
+```
