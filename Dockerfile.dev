@@ -1,0 +1,24 @@
+#FROM ruby:2.5.3-alpine
+FROM ruby@sha256:1780a51835cad01073b306d78ec55fe095ad29b66105a9efbee48921f5a71800
+
+RUN apk add --update --no-cache bash elixir erlang-crypto
+
+WORKDIR /app
+
+# bundle
+COPY .ruby-version Gemfile Gemfile.lock ./
+RUN bundle install --quiet --jobs 4
+
+# code
+COPY bin /app/bin
+COPY lib /app/lib
+
+# test
+COPY Rakefile .travis.yml .rubocop.yml ./
+COPY test /app/test
+
+# clients
+COPY gem gem
+COPY elixir elixir
+
+CMD ["bash"]

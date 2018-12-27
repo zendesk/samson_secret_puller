@@ -1,9 +1,8 @@
-# ruby:2.4.2-alpine
-FROM ruby@sha256:6b85a95c42eaf84f46884c82376aa653b343a0bd81ce3350dea2c56e0b15dcd6
+#FROM ruby:2.5.3-alpine
+FROM ruby@sha256:1780a51835cad01073b306d78ec55fe095ad29b66105a9efbee48921f5a71800
 
 RUN apk add --update --no-cache \
-  bash openssl curl elixir erlang-crypto && \
-  mkdir /app && \
+  bash openssl curl && \
   wget -O /usr/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.2.0_amd64 && \
   chmod +x /usr/bin/dumb-init
 
@@ -11,26 +10,14 @@ WORKDIR /app
 
 # bundle
 COPY .ruby-version Gemfile Gemfile.lock ./
-RUN cd /app && bundle install --quiet --jobs 4
+RUN bundle install --quiet --jobs 4
 
-# app
-ADD bin /app/bin
-ADD lib /app/lib
+# code
+COPY bin /app/bin
+COPY lib /app/lib
 
-# test
-COPY Rakefile .travis.yml .rubocop.yml ./
-ADD test /app/test
-
-# clients
-ADD gem gem
-ADD elixir elixir
-
-# tests need to write in elixir/_build
-RUN chmod -R a+w elixir
-
+# run as unpriviledged user
 RUN adduser -S app -u 1000
 USER 1000
-
-RUN mix local.hex --force
 
 CMD ["/usr/bin/dumb-init", "--", "bundle", "exec", "bin/secrets"]
