@@ -1,7 +1,7 @@
 #FROM ruby:2.5.3-alpine
 FROM ruby@sha256:1780a51835cad01073b306d78ec55fe095ad29b66105a9efbee48921f5a71800
 
-RUN apk add --update --no-cache bash elixir erlang-crypto
+RUN apk add --update --no-cache bash curl openssl elixir erlang-crypto
 
 WORKDIR /app
 
@@ -20,5 +20,6 @@ COPY test /app/test
 # clients
 COPY gem gem
 COPY elixir elixir
+RUN mix local.hex --force
 
 CMD ["bash"]
