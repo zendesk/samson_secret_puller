@@ -1,6 +1,8 @@
 #FROM ruby:2.5.3-alpine
 FROM ruby@sha256:1780a51835cad01073b306d78ec55fe095ad29b66105a9efbee48921f5a71800
 
+RUN apk add --update --no-cache bash curl openssl elixir erlang-crypto
+
 WORKDIR /app
 
 # bundle
@@ -11,8 +13,13 @@ RUN bundle install --quiet --jobs 4
 COPY bin /app/bin
 COPY lib /app/lib
 
-# run as unpriviledged user
-RUN adduser -S app -u 1000
-USER 1000
+# test
+COPY Rakefile .travis.yml .rubocop.yml ./
+COPY test /app/test
 
-CMD [""bundle", "exec", "bin/secrets"]
+# clients
+COPY gem gem
+COPY elixir elixir
+RUN mix local.hex --force
+
+CMD ["bash"]

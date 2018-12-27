@@ -26,9 +26,14 @@ task :build do
   sh "docker build -t zendesk/samson_secret_puller ."
 end
 
+desc "Build a new dev version"
+task :build_dev do
+  sh "docker build -t zendesk/samson_secret_puller-dev -f Dockerfile.dev ."
+end
+
 desc "Run tests in docker"
-task test_in_docker: :build do
-  sh "docker run -it --rm zendesk/samson_secret_puller rake"
+task test_in_docker: :build_dev do
+  sh "docker run -it --rm zendesk/samson_secret_puller-dev rake"
 end
 
 desc "Release a new version"
