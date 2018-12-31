@@ -2,4 +2,9 @@ require 'bundler/setup'
 require 'bundler/gem_tasks'
 require 'bump/tasks'
 
-# TODO: make bump not tag since we only have 1 source of tags for the repo
+# make `rake release` not tag the repo since this repo includes multiple components
+push = "release:source_control_push"
+Rake::Task[push].clear
+task "release:source_control_push" do
+  sh "git", "push"
+end
