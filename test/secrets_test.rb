@@ -28,7 +28,8 @@ describe SecretsClient do
       annotations: 'annotations',
       serviceaccount_dir: Dir.pwd,
       output_path: Dir.pwd,
-      api_url: 'https://foo.bar'
+      api_url: 'https://foo.bar',
+      v2: false
     }
   end
   let(:token_client) { SecretsClient.new(client_options) }
@@ -86,7 +87,7 @@ describe SecretsClient do
 
   describe "#process" do
     let(:reply) { {data: {vault: 'foo'}}.to_json }
-    let(:url) { 'https://foo.bar:8200/v1/secret/apps/this/is/very/hidden' }
+    let(:url) { +'https://foo.bar:8200/v1/secret/apps/this/is/very/hidden' }
 
     before do
       stub_request(:get, url).to_return(response_body(reply))
@@ -115,6 +116,15 @@ describe SecretsClient do
       process
       assert File.exist?("SECRET")
       refute File.exist?("OTHER")
+    end
+
+    it 'can read v2' do
+      client_options[:v2] = true
+      url.sub!('/apps', '/data/apps') || raise
+      request = stub_request(:get, url).to_return(response_body({data: {data: {vault: 'foo'}}}.to_json))
+      process
+      File.read("SECRET").must_equal("foo")
+      assert_requested request
     end
 
     it 'raises when no secrets were used' do

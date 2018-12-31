@@ -18,7 +18,7 @@ class SecretsClient
   LINK_LOCAL_IP = '169.254.1.1'.freeze # Kubernetes nodes are configured with this special link-local IP
 
   # auth against the server, set a token in the Vault obj
-  def initialize(vault_address:, authfile_path:, ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:)
+  def initialize(vault_address:, authfile_path:, ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:, v2:)
     raise "vault address not found" if vault_address.nil?
     raise "authfile not found" unless File.exist?(authfile_path.to_s)
     raise "annotations file not found" unless File.exist?(annotations.to_s)
@@ -29,6 +29,7 @@ class SecretsClient
     @serviceaccount_dir = serviceaccount_dir
     @api_url = api_url
     @ssl_verify = ssl_verify
+    @v2 = v2
 
     Vault.configure do |config|
       config.ssl_verify = ssl_verify
@@ -156,7 +157,7 @@ class SecretsClient
       raise "Bad results returned from vault server for #{key}: #{result.inspect}"
     end
 
-    result.data.fetch(:vault)
+    @v2 ? result.data.fetch(:data).fetch(:vault) : result.data.fetch(:vault)
   end
 
   # keys could include slashes in last part, which we would then be unable to resolve
@@ -168,7 +169,11 @@ class SecretsClient
   end
 
   def vault_path(key)
-    VAULT_SECRET_BACKEND + SAMSON_SECRET_NAMESPACE + key
+    if @v2
+      VAULT_SECRET_BACKEND + "data/" + SAMSON_SECRET_NAMESPACE + key
+    else
+      VAULT_SECRET_BACKEND + SAMSON_SECRET_NAMESPACE + key
+    end
   end
 
   def secrets_from_annotations(annotations)

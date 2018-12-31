@@ -15,6 +15,7 @@ VAULT_AUTH_FILE: required. path to token or pemfile on disk
 
 VAULT_AUTH_FILE: optional, location of the mounted secret on disk, defaults to '/vault-auth/authsecret'
 VAULT_TLS_VERIFY: optional, wether to verify ssl when talking to vault, defaults to false
+VAULT_KV_V2: optional, wether this is vault kv v2, defaults to false
 SIDECAR_SECRET_PATH: optional, where to store the secrets on disk, defaults to  '/secrets'
 SECRET_ANNOTATIONS: optional, where to read annotations from, defaults to '/secretkeys/annotations'
 SERVICEACCOUNT_DIR: optional, where to service account from, defaults to '/var/run/secrets/kubernetes.io/serviceaccount/'
