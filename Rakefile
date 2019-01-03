@@ -38,6 +38,6 @@ end
 
 desc "Release a new version"
 task release: :build do
-  sh "docker tag -f zendesk/samson_secret_puller zendesk/samson_secret_puller:latest"
+  sh "docker tag zendesk/samson_secret_puller zendesk/samson_secret_puller:latest"
   sh "docker push zendesk/samson_secret_puller:latest"
 end
