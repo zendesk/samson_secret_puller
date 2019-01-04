@@ -15,4 +15,4 @@ COPY lib /app/lib
 RUN adduser -S app -u 1000
 USER 1000
 
-CMD [""bundle", "exec", "bin/secrets"]
+CMD ["bundle", "exec", "bin/secrets"]

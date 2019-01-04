@@ -176,11 +176,12 @@ class SecretsClient
     end
   end
 
+  # secret/FOO="a/b/c/z" -> {"FOO" => "a/b/c/d"}
   def secrets_from_annotations(annotations)
     File.read(annotations).split("\n").map do |line|
-      next unless line.start_with?(VAULT_SECRET_BACKEND)
+      next unless line.sub! /^#{VAULT_SECRET_BACKEND}/, ""
       key, path = line.split("=", 2)
-      key = key.split("/", 2).last
+      path.delete!('"')
       [key, path]
     end.compact
   end

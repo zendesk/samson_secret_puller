@@ -54,7 +54,7 @@ describe SecretsClient do
         File.write("ca.crt", File.read(Bundler.root.join("test/fixtures/self_signed_testing.pem")))
         File.write("namespace", File.read(Bundler.root.join("test/fixtures/namespace")))
         File.write("token", File.read(Bundler.root.join("test/fixtures/fake_token")))
-        File.write('annotations', "secret/SECRET=this/is/very/hidden")
+        File.write('annotations', "secret/SECRET=\"this/is/very/hidden\"")
         test.call
       end
     end
@@ -111,8 +111,19 @@ describe SecretsClient do
       File.read("SECRET").must_equal("foo")
     end
 
+    it 'ignores = in path' do
+      url.sub!('hidden', 'hi=dden') || raise
+      request = stub_request(:get, url).to_return(response_body({data: {vault: 'foo'}}.to_json))
+      File.write('annotations', File.read('annotations').sub!("hidden", "hi=dden"))
+
+      process
+
+      File.read("SECRET").must_equal("foo")
+      assert_requested request
+    end
+
     it 'ignores non-secrets' do
-      File.write('annotations', File.read('annotations') + "\n" + "OTHER=this/is/not/hidden")
+      File.write('annotations', File.read('annotations') + "\n" + "OTHER=\"this/is/not/hidden\"")
       process
       assert File.exist?("SECRET")
       refute File.exist?("OTHER")
@@ -122,13 +133,15 @@ describe SecretsClient do
       client_options[:v2] = true
       url.sub!('/apps', '/data/apps') || raise
       request = stub_request(:get, url).to_return(response_body({data: {data: {vault: 'foo'}}}.to_json))
+
       process
+
       File.read("SECRET").must_equal("foo")
       assert_requested request
     end
 
     it 'raises when no secrets were used' do
-      File.write('annotations', "other-annotation=this/is/not/hidden")
+      File.write('annotations', "other-annotation=\"this/is/not/hidden\"")
       assert_raises(RuntimeError) { process }
       refute File.exist?("SECRET")
     end
@@ -159,7 +172,7 @@ describe SecretsClient do
     end
 
     it 'raises useful debugging info when multiple keys fail' do
-      File.write('annotations', "secret/SECRET=this/is/very/hidden\nsecret/SECRE2=this/is/very/secret")
+      File.write('annotations', "secret/SECRET=\"this/is/very/hidden\"\nsecret/SECRE2=\"this/is/very/secret\"")
       stub_request(:get, url).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
       url2 = url.sub!('very/hidden', 'very/secret') || raise
       stub_request(:get, url2).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
@@ -175,7 +188,7 @@ describe SecretsClient do
       end
 
       it 'can be overwritten by the user' do
-        File.write('annotations', "secret/CONSUL_URL=this/is/very/hidden")
+        File.write('annotations', "secret/CONSUL_URL=\"this/is/very/hidden\"")
         process
         File.read('CONSUL_URL').must_equal 'foo'
       end
