@@ -23,7 +23,9 @@ end
 
 desc "Build a new version"
 task :build do
-  sh "docker build -t zendesk/samson_secret_puller ."
+  revision = `git rev-parse HEAD`.strip
+  raise unless $?.success?
+  sh "docker", "build", "--label", "revision=#{revision}", "-t", "zendesk/samson_secret_puller", "."
 end
 
 desc "Build a new dev version"
