@@ -23,18 +23,20 @@ describe SecretsClient do
   let(:client_options) do
     {
       vault_address: 'https://foo.bar:8200',
-      authfile_path: 'token',
+      vault_authfile_path: 'token',
+      vault_prefix: 'apps',
+      vault_mount: 'secret',
       ssl_verify: false,
       annotations: 'annotations',
       serviceaccount_dir: Dir.pwd,
       output_path: Dir.pwd,
       api_url: 'https://foo.bar',
-      v2: false
+      vault_v2: false
     }
   end
   let(:token_client) { SecretsClient.new(client_options) }
   let(:client) do
-    client_options[:authfile_path] = "vaultpem"
+    client_options[:vault_authfile_path] = "vaultpem"
     SecretsClient.new(client_options)
   end
   let(:auth_reply) { {auth: {client_token: 'sometoken'}}.to_json }
@@ -130,7 +132,7 @@ describe SecretsClient do
     end
 
     it 'can read v2' do
-      client_options[:v2] = true
+      client_options[:vault_v2] = true
       url.sub!('/apps', '/data/apps') || raise
       request = stub_request(:get, url).to_return(response_body({data: {data: {vault: 'foo'}}}.to_json))
 
