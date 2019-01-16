@@ -12,24 +12,27 @@ end)
 class SecretsClient
   ENCODINGS = {"/" => "%2F"}.freeze
   CERT_AUTH_PATH = '/v1/auth/cert/login'.freeze
-  VAULT_SECRET_BACKEND = 'secret/'.freeze
-  SAMSON_SECRET_NAMESPACE = 'apps/'.freeze
   KEY_PARTS = 4
   LINK_LOCAL_IP = '169.254.1.1'.freeze # Kubernetes nodes are configured with this special link-local IP
 
   # auth against the server, set a token in the Vault obj
-  def initialize(vault_address:, authfile_path:, ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:, v2:)
+  def initialize(
+    vault_address:, vault_mount:, vault_prefix:, vault_v2:, vault_authfile_path:,
+    ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:
+  )
     raise "vault address not found" if vault_address.nil?
-    raise "authfile not found" unless File.exist?(authfile_path.to_s)
+    raise "authfile not found" unless File.exist?(vault_authfile_path.to_s)
     raise "annotations file not found" unless File.exist?(annotations.to_s)
     raise "serviceaccount dir #{serviceaccount_dir} not found" unless Dir.exist?(serviceaccount_dir.to_s)
     raise "api_url is null" if api_url.nil?
 
+    @vault_mount = vault_mount
+    @vault_prefix = vault_prefix
     @output_path = output_path
     @serviceaccount_dir = serviceaccount_dir
     @api_url = api_url
     @ssl_verify = ssl_verify
-    @v2 = v2
+    @vault_v2 = vault_v2
 
     Vault.configure do |config|
       config.ssl_verify = ssl_verify
@@ -39,7 +42,7 @@ class SecretsClient
       config.read_timeout = 2
     end
 
-    Vault.token = read_vault_token(authfile_path)
+    Vault.token = read_vault_token(vault_authfile_path)
 
     @secret_keys = secrets_from_annotations(annotations)
     raise "#{annotations} contains no secrets" if @secret_keys.empty?
@@ -157,7 +160,7 @@ class SecretsClient
       raise "Bad results returned from vault server for #{key}: #{result.inspect}"
     end
 
-    @v2 ? result.data.fetch(:data).fetch(:vault) : result.data.fetch(:vault)
+    @vault_v2 ? result.data.fetch(:data).fetch(:vault) : result.data.fetch(:vault)
   end
 
   # keys could include slashes in last part, which we would then be unable to resolve
@@ -169,17 +172,17 @@ class SecretsClient
   end
 
   def vault_path(key)
-    if @v2
-      VAULT_SECRET_BACKEND + "data/" + SAMSON_SECRET_NAMESPACE + key
+    if @vault_v2
+      "#{@vault_mount}/data/#{@vault_prefix}/#{key}"
     else
-      VAULT_SECRET_BACKEND + SAMSON_SECRET_NAMESPACE + key
+      "#{@vault_mount}/#{@vault_prefix}/#{key}"
     end
   end
 
   # secret/FOO="a/b/c/z" -> {"FOO" => "a/b/c/d"}
   def secrets_from_annotations(annotations)
     File.read(annotations).split("\n").map do |line|
-      next unless line.sub! /^#{VAULT_SECRET_BACKEND}/, ""
+      next unless line.sub! /^secret\//, ""
       key, path = line.split("=", 2)
       path.delete!('"')
       [key, path]
