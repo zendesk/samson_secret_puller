@@ -4,6 +4,8 @@ require 'timeout'
 require 'rack'
 
 describe "CLI" do
+  let(:port) { 8211 }
+
   around do |test|
     WebMock.disable!
     test.call
@@ -19,23 +21,24 @@ describe "CLI" do
     File.write('namespace', File.read("#{Bundler.root}/test/fixtures/namespace"))
     File.write('input', 'secret/BAR=foo/bar/baz/bam')
 
+    # mix of vault and kubernetes for simplicity
     replies = {
       '/v1/auth/cert/login' => {auth: {client_token: 'sometoken'}},
       '/v1/secret/apps/foo/bar/baz/bam' => {data: {vault: 'foo'}},
       '/api/v1/namespaces/default/pods' => {items: [{status: {hostIP: "10.10.10.10"}}]}
     }
 
-    FakeServer.open(8211, replies) do |server|
+    FakeServer.open(port, replies) do |server|
       server.wait
       with_env(
         TESTING: 'true',
-        VAULT_ADDR: 'http://localhost:8211',
+        VAULT_ADDR: "http://localhost:#{port}",
         VAULT_AUTH_FILE: 'pem',
         VAULT_TLS_VERIFY: 'false',
         SIDECAR_SECRET_PATH: Dir.pwd,
         SERVICEACCOUNT_DIR: Dir.pwd,
         SECRET_ANNOTATIONS: 'input',
-        KUBERNETES_PORT_443_TCP_ADDR: 'localhost:8211'
+        KUBERNETES_PORT_443_TCP_ADDR: "localhost:#{port}"
       ) do
         sh "#{Bundler.root}/bin/secrets"
         File.read('BAR').must_equal('foo') # secret was written out
