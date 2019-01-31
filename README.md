@@ -24,8 +24,8 @@ SERVICEACCOUNT_DIR: optional, where to service account from, defaults to '/var/r
 **(secrets in repo work only for testing)**.    
 
 Example config:
- - [kubernets/vault-auth-secret.yml](kubernets/vault-auth-secret.yml)
- - [kubernets/vault-auth-token.yml](kubernets/vault-auth-token.yml)
+ - [kubernetes/vault-auth-secret.yml](kubernetes/vault-auth-secret.yml)
+ - [kubernetes/vault-auth-token.yml](kubernetes/vault-auth-token.yml)
 
 ### Example workflow
 
@@ -44,6 +44,10 @@ SamsonSecretPuller.replace_ENV!
 
 ENV['FOO'] -> read from /secrets/FOO or falls back to ENV['FOO']
 ```
+
+### Debugging
+
+Since the init-container always shuts down, debug by using a dedicated Pod, see [kubernetes/debug.yml]
 
 ### Test
 

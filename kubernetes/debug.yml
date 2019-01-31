@@ -1,0 +1,54 @@
+# Config to create a pod of the secret-puller so it can be execed into and debugged
+#
+# git clone git@github.com:zendesk/samson_secret_puller.git
+# cd samson_secret_puller
+# kubectl apply -f kubernetes/debug.yml
+# kubectl exec -it debug-secret-puller sh
+# ... modify /secretkeys/annotations and run ./bin/secrets
+# kubectl delete -f kubernetes/debug.yml
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-secret-puller
+  labels:
+    project: samson_secret_puller
+    role: puller
+    team: compute
+  annotations:
+    # paste annotations from failing resource here
+    # or modify /secretkeys after exec-ing into the pod
+    secret/MYSQL_USER: global/global/global/mysql_user
+spec:
+  restartPolicy: Never
+  volumes:
+  - name: secrets-volume
+    emptyDir:
+      medium: Memory
+  - name: vaultauth
+    secret:
+      secretName: vaultauth
+  - name: secretkeys
+    downwardAPI:
+      items:
+      - path: "annotations"
+        fieldRef:
+          fieldPath: "metadata.annotations"
+  containers:
+  - name: secret-puller
+    image: zendesk/samson_secret_puller:latest
+    resources:
+      requests:
+        cpu: '0.1'
+        memory: '100Mi'
+      limits:
+        cpu: '0.5'
+        memory: '300Mi'
+    command: ["sleep", "9999"]
+    volumeMounts:
+    - mountPath: /vault-auth
+      name: vaultauth
+    - mountPath: /secretkeys
+      name: secretkeys
+    - mountPath: /secrets
+      name: secrets-volume
