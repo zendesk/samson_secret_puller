@@ -6,7 +6,7 @@ branches:
 before_script:
 - docker -v
 - docker build -t secret_tester -f Dockerfile.dev .
-script: docker run -it --rm secret_tester rake $TASK
+script: docker run -it --rm secret_tester bundle exec rake $TASK
 env:
 - TASK=test
 - TASK=rubocop
