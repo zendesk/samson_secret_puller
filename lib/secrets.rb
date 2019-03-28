@@ -18,7 +18,7 @@ class SecretsClient
   # auth against the server, set a token in the Vault obj
   def initialize(
     vault_address:, vault_mount:, vault_prefix:, vault_v2:, vault_authfile_path:,
-    ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:
+    ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:, logger:
   )
     raise "vault address not found" if vault_address.nil?
     raise "authfile not found" unless File.exist?(vault_authfile_path.to_s)
@@ -33,6 +33,7 @@ class SecretsClient
     @api_url = api_url
     @ssl_verify = ssl_verify
     @vault_v2 = vault_v2
+    @logger = logger
 
     Vault.configure do |config|
       config.ssl_verify = ssl_verify
@@ -46,7 +47,7 @@ class SecretsClient
 
     @secret_keys = secrets_from_annotations(annotations)
     raise "#{annotations} contains no secrets" if @secret_keys.empty?
-    log("secrets found: #{@secret_keys.join(",")}")
+    @logger.info(message: "secrets found", keys: @secret_keys)
   end
 
   def write_secrets
@@ -74,12 +75,11 @@ class SecretsClient
     # Write out user defined secrets
     secrets.each do |key, secret|
       File.write("#{@output_path}/#{key}", secret)
-      log("writing secrets: #{key}")
     end
 
     # notify primary container that it is now safe to read all secrets
-    log("all secrets written")
     File.write("#{@output_path}/.done", Time.now.to_s)
+    @logger.info(message: "secrets written")
   end
 
   private
@@ -197,10 +197,6 @@ class SecretsClient
     JSON.parse(response).fetch("auth").fetch("client_token")
   rescue OpenSSL::X509::CertificateError
     File.read(authfile_path)
-  end
-
-  def log(msg)
-    puts "#{Time.now}: #{msg}" unless ENV["testing"]
   end
 
   def with_retries(&block)

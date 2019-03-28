@@ -37,9 +37,3 @@ desc "Run tests in docker"
 task test_in_docker: :build_dev do
   sh "docker run -it --rm zendesk/samson_secret_puller-dev rake"
 end
-
-desc "Release a new version"
-task release: :build do
-  sh "docker tag zendesk/samson_secret_puller zendesk/samson_secret_puller:latest"
-  sh "docker push zendesk/samson_secret_puller:latest"
-end
