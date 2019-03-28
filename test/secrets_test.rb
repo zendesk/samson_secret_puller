@@ -3,6 +3,7 @@ require_relative 'test_helper'
 SingleCov.covered!
 
 require_relative "../lib/secrets.rb"
+require "logger"
 
 ENV["KUBERNETES_PORT_443_TCP_ADDR"] = 'foo.bar'
 ENV["testing"] = "true"
@@ -31,9 +32,11 @@ describe SecretsClient do
       serviceaccount_dir: Dir.pwd,
       output_path: Dir.pwd,
       api_url: 'https://foo.bar',
-      vault_v2: false
+      vault_v2: false,
+      logger: logger
     }
   end
+  let(:logger) { Logger.new(STDOUT) }
   let(:token_client) { SecretsClient.new(client_options) }
   let(:client) do
     client_options[:vault_authfile_path] = "vaultpem"
@@ -43,6 +46,7 @@ describe SecretsClient do
   let(:status_api_body) { {items: [{status: {hostIP: "10.10.10.10"}}]}.to_json }
 
   before do
+    logger.stubs(:info)
     stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").
       to_return(body: auth_reply)
     stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").
@@ -101,9 +105,9 @@ describe SecretsClient do
     end
 
     it 'logs' do
-      SecretsClient.any_instance.expects(:log).with('secrets found: SECRET,this/is/very/hidden')
-      SecretsClient.any_instance.expects(:log).with('writing secrets: SECRET')
-      SecretsClient.any_instance.expects(:log).with('all secrets written')
+      logger.unstub(:info)
+      logger.expects(:info).with(message: "secrets found", keys: [["SECRET", "this/is/very/hidden"]])
+      logger.expects(:info).with(message: "secrets written")
       process
     end
 

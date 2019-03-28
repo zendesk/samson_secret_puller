@@ -56,6 +56,7 @@ Since the init-container always shuts down, debug by using a dedicated Pod, see 
 ### Release to [docker hub](https://hub.docker.com/r/zendesk/samson_secret_puller/)
 
 Merge PR then `docker pull zendesk/samson_secret_puller` to get latest digest.
+(for branches, `rake build` and then tag+push them manually)
 
 ## Ruby Gem
 
