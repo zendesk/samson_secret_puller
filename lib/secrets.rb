@@ -11,17 +11,16 @@ end)
 
 class SecretsClient
   ENCODINGS = {"/" => "%2F"}.freeze
-  CERT_AUTH_PATH = '/v1/auth/cert/login'.freeze
   KEY_PARTS = 4
   LINK_LOCAL_IP = '169.254.1.1'.freeze # Kubernetes nodes are configured with this special link-local IP
 
   # auth against the server, set a token in the Vault obj
   def initialize(
-    vault_address:, vault_mount:, vault_prefix:, vault_v2:, vault_authfile_path:,
-    ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:, logger:
+    vault_address:, vault_mount:, vault_prefix:, vault_v2:,
+    ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:, logger:,
+    vault_auth_type: 'token', vault_auth_path: nil, vault_auth_role: nil, vault_authfile_path: nil
   )
     raise "vault address not found" if vault_address.nil?
-    raise "authfile not found" unless File.exist?(vault_authfile_path.to_s)
     raise "annotations file not found" unless File.exist?(annotations.to_s)
     raise "serviceaccount dir #{serviceaccount_dir} not found" unless Dir.exist?(serviceaccount_dir.to_s)
     raise "api_url is null" if api_url.nil?
@@ -35,15 +34,23 @@ class SecretsClient
     @vault_v2 = vault_v2
     @logger = logger
 
-    Vault.configure do |config|
-      config.ssl_verify = ssl_verify
-      config.address = vault_address
-      config.ssl_timeout  = 3
-      config.open_timeout = 3
-      config.read_timeout = 2
-    end
+    @vault = Vault::Client.new(
+      ssl_verify: ssl_verify,
+      address: vault_address,
+      ssl_timeout: 3,
+      open_timeout: 3,
+      read_timeout: 2
+    )
 
-    Vault.token = read_vault_token(vault_authfile_path)
+    @vault.with_retries(Vault::HTTPConnectionError, attempts: 3) do
+      authenticate_vault(
+        @vault,
+        vault_auth_type: vault_auth_type,
+        vault_auth_path: vault_auth_path,
+        vault_authfile_path: vault_authfile_path,
+        vault_auth_role: vault_auth_role
+      )
+    end
 
     @secret_keys = secrets_from_annotations(annotations)
     raise "#{annotations} contains no secrets" if @secret_keys.empty?
@@ -94,25 +101,6 @@ class SecretsClient
     end
   end
 
-  def http_post(url, pem:)
-    pem_contents = File.read(pem)
-    uri = URI.parse(url)
-    http = Net::HTTP.start(
-      uri.host,
-      uri.port,
-      use_ssl: (uri.scheme == 'https'),
-      verify_mode: (@ssl_verify ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE),
-      cert: OpenSSL::X509::Certificate.new(pem_contents),
-      key: OpenSSL::PKey::RSA.new(pem_contents)
-    )
-    response = http.request(Net::HTTP::Post.new(uri.path))
-    if response.code.to_i == 200
-      response.body
-    else
-      raise "Could not POST #{url}: #{response.code} / #{response.body}"
-    end
-  end
-
   def http_get(url, headers:, ca_file:)
     uri = URI.parse(url)
     req = Net::HTTP::Get.new(uri.path)
@@ -133,13 +121,16 @@ class SecretsClient
     end
   end
 
+  def serviceaccount_token
+    @serviceaccount_token ||= File.read(@serviceaccount_dir + '/token')
+  end
+
   def host_ip
     @host_ip ||= begin
-      token = File.read(@serviceaccount_dir + '/token')
       namespace = File.read(@serviceaccount_dir + '/namespace')
       api_response = http_get(
         @api_url + "/api/v1/namespaces/#{namespace}/pods",
-        headers: {"Authorization" => "Bearer #{token}"},
+        headers: {"Authorization" => "Bearer #{serviceaccount_token}"},
         ca_file: "#{@serviceaccount_dir}/ca.crt"
       )
       api_response = JSON.parse(api_response, symbolize_names: true)
@@ -150,7 +141,9 @@ class SecretsClient
   def read_from_vault(key)
     key = normalize_key(key)
     begin
-      result = with_retries { Vault.logical.read(vault_path(key)) }
+      result = @vault.with_retries(Vault::HTTPConnectionError, attempts: 3) do
+        @vault.logical.read(vault_key_path(key))
+      end
     rescue Vault::HTTPClientError
       $!.message.prepend "Error reading key #{key}\n"
       raise
@@ -171,7 +164,7 @@ class SecretsClient
     parts.join('/')
   end
 
-  def vault_path(key)
+  def vault_key_path(key)
     if @vault_v2
       "#{@vault_mount}/data/#{@vault_prefix}/#{key}"
     else
@@ -189,17 +182,35 @@ class SecretsClient
     end.compact
   end
 
-  # check and see if the authfile is a pem or a token,
-  # then act accordingly
-  def read_vault_token(authfile_path)
-    OpenSSL::X509::Certificate.new File.read(authfile_path)
-    response = http_post(File.join(Vault.address, CERT_AUTH_PATH), pem: authfile_path)
-    JSON.parse(response).fetch("auth").fetch("client_token")
-  rescue OpenSSL::X509::CertificateError
-    File.read(authfile_path)
-  end
+  def authenticate_vault(client, vault_auth_type:, vault_auth_path: nil, vault_auth_role: nil, vault_authfile_path: nil)
+    vault_auth_path ||= vault_auth_type
 
-  def with_retries(&block)
-    Vault.with_retries(Vault::HTTPConnectionError, attempts: 3, &block)
+    case vault_auth_type
+    when 'kubernetes'
+      # https://www.vaultproject.io/api/auth/kubernetes/index.html#login
+      payload = { role: vault_auth_role, jwt: serviceaccount_token }
+      json = client.post("/v1/auth/#{vault_auth_path}/login", JSON.fast_generate(payload))
+    when 'cert'
+      raise "authfile not found" unless File.exist?(vault_authfile_path.to_s)
+      new_client = client.dup
+      new_client.ssl_pem_file = vault_authfile_path
+      json = new_client.post("/v1/auth/#{vault_auth_path}/login")
+    when 'token'
+      raise "authfile not found" unless File.exist?(vault_authfile_path.to_s)
+      client.token = File.read(vault_authfile_path)
+      json = client.get("/v1/auth/token/lookup-self")
+    else
+      raise "Unsupported Vault Auth Type: #{vault_auth_type}"
+    end
+
+    secret = Vault::Secret.decode(json)
+    if vault_auth_type == "token"
+      auth_data = Vault::SecretAuth.decode(secret.data)
+    else
+      auth_data = secret.auth
+      client.token = secret.auth.client_token
+    end
+
+    @logger.info(message: "Authenticated with Vault Server", policies: auth_data.policies, metadata: auth_data.metadata)
   end
 end

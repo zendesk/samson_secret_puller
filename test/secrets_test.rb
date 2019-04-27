@@ -38,17 +38,27 @@ describe SecretsClient do
   end
   let(:logger) { Logger.new(STDOUT) }
   let(:token_client) { SecretsClient.new(client_options) }
+  let(:serviceaccount_client) do
+    client_options[:vault_auth_type] = "kubernetes"
+    SecretsClient.new(client_options)
+  end
   let(:client) do
+    client_options[:vault_auth_type] = "cert"
     client_options[:vault_authfile_path] = "vaultpem"
     SecretsClient.new(client_options)
   end
   let(:auth_reply) { {auth: {client_token: 'sometoken'}}.to_json }
+  let(:token_reply) { { data: {id: 'sometoken'}}.to_json }
   let(:status_api_body) { {items: [{status: {hostIP: "10.10.10.10"}}]}.to_json }
 
   before do
     logger.stubs(:info)
     stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").
       to_return(body: auth_reply)
+    stub_request(:post, "https://foo.bar:8200/v1/auth/kubernetes/login").
+      to_return(body: auth_reply)
+    stub_request(:get, "https://foo.bar:8200/v1/auth/token/lookup-self").
+      to_return(body: token_reply)
     stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").
       to_return(body: status_api_body)
   end
@@ -75,6 +85,10 @@ describe SecretsClient do
       token_client
     end
 
+    it "works with a serviceaccount" do
+      serviceaccount_client
+    end
+
     it "fails to initialize with missing pem" do
       File.delete('vaultpem')
       assert_raises(RuntimeError) { client }
@@ -88,6 +102,11 @@ describe SecretsClient do
     it "fails to initialize with missing annotations" do
       File.delete('annotations')
       assert_raises(RuntimeError) { client }
+    end
+
+    it "fails to initialize with invalid type" do
+      client_options[:vault_auth_type] = "foobar"
+      assert_raises(RuntimeError) { SecretsClient.new(client_options) }
     end
   end
 
@@ -106,6 +125,7 @@ describe SecretsClient do
 
     it 'logs' do
       logger.unstub(:info)
+      logger.expects(:info).with(message: "Authenticated with Vault Server", policies: nil, metadata: nil)
       logger.expects(:info).with(message: "secrets found", keys: [["SECRET", "this/is/very/hidden"]])
       logger.expects(:info).with(message: "secrets written")
       process
@@ -159,9 +179,10 @@ describe SecretsClient do
 
     it "raises when response is not 200" do
       stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").
-        to_return(status: 500)
-      e = assert_raises(RuntimeError) { process }
-      e.message.must_include("Could not POST https://foo.bar:8200/v1/auth/cert/login: 500 /")
+        to_return(status: 500, body: { errors: ["sample error"]}.to_json)
+      e = assert_raises(Vault::HTTPError) { process }
+      e.message.must_include("sample error")
+      e.message.must_include("The Vault server at `https://foo.bar:8200'")
     end
 
     it 'raises useful debugging info when a timeout is encountered' do

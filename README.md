@@ -4,17 +4,17 @@ Application to run in a kubernetes init container,
 to publish secrets to containerized applications without using process environment 
 ([which is unsafe](https://diogomonica.com/2017/03/27/why-you-shouldnt-use-env-variables-for-secret-data/)),
 used in [samson](https://github.com/zendesk/samson),
-
 and libraries for multiple languages to read these secrets from disk.
 
 The init container understands these env vars:
 
 ```
 VAULT_ADDR: required, url of vault
-VAULT_AUTH_FILE: required. path to token or pemfile on disk
-
-VAULT_AUTH_FILE: optional, location of the mounted secret on disk, defaults to '/vault-auth/authsecret'
-VAULT_TLS_VERIFY: optional, wether to verify ssl when talking to vault, defaults to false
+VAULT_AUTH_FILE: optional, location of the mounted vault token / pemfile on disk, defaults to '/vault-auth/authsecret'
+VAULT_AUTH_TYPE: optional, the type of authentication to attempt, defaults to 'token'
+VAULT_AUTH_PATH: optional, allows specifing a custom vault auth path, defaults to $VAULT_AUTH_TYPE
+VAULT_AUTH_ROLE: optional, the role against which Vault login should be attempted (required where VAULT_AUTH_TYPE=kubernetes)
+VAULT_TLS_VERIFY: optional, whether to verify ssl when talking to vault, defaults to false
 VAULT_KV_V2: optional, wether this is vault kv v2, defaults to false
 SIDECAR_SECRET_PATH: optional, where to store the secrets on disk, defaults to  '/secrets'
 SECRET_ANNOTATIONS: optional, where to read annotations from, defaults to '/secretkeys/annotations'
@@ -26,6 +26,28 @@ SERVICEACCOUNT_DIR: optional, where to service account from, defaults to '/var/r
 Example config:
  - [kubernetes/vault-auth-secret.yml](kubernetes/vault-auth-secret.yml)
  - [kubernetes/vault-auth-token.yml](kubernetes/vault-auth-token.yml)
+ 
+#### Supported Authentication Types
+##### `VAULT_AUTH_TYPE=token` (default)
+
+The file path specified in `VAULT_AUTH_FILE` will be read and used as a Vault token directly.
+The token is validated using Vault's [lookup-self API](https://www.vaultproject.io/api/auth/token/index.html#lookup-a-token-self-). 
+
+##### `VAULT_AUTH_TYPE=cert`
+
+The file path specified in `VAULT_AUTH_FILE` will be read and used as an X509 Certificate Vault
+to authenticate with vault using the [TLS Certificate Auth backend](https://www.vaultproject.io/api/auth/cert/index.html).
+
+If the backend is mounted at a different path from `/auth/cert`, it can be customised using the `VAULT_AUTH_PATH` env var.
+
+
+##### `VAULT_AUTH_TYPE=kubernetes`
+
+The Kubernetes ServiceAccount mounted into the init container will be used to  
+authenticate with vault using the [Kubernetes Auth backend](https://www.vaultproject.io/api/auth/kubernetes/index.html).
+The role against which login will be attempted is set via `VAULT_AUTH_ROLE`.
+
+If the backend is mounted at a different path from `/auth/kubernetes`, it can be customised using the `VAULT_AUTH_PATH` env var.
 
 ### Example workflow
 
