@@ -9,10 +9,18 @@ ENV["KUBERNETES_PORT_443_TCP_ADDR"] = 'foo.bar'
 ENV["testing"] = "true"
 
 describe SecretsClient do
-  def process
+  def process_secrets
     old = $stdout
     $stdout = StringIO.new
     client.write_secrets
+  ensure
+    $stdout = old
+  end
+
+  def process_pki_certs
+    old = $stdout
+    $stdout = StringIO.new
+    client.write_pki_certs
   ensure
     $stdout = old
   end
@@ -60,7 +68,7 @@ describe SecretsClient do
         File.write("ca.crt", File.read(Bundler.root.join("test/fixtures/self_signed_testing.pem")))
         File.write("namespace", File.read(Bundler.root.join("test/fixtures/namespace")))
         File.write("token", File.read(Bundler.root.join("test/fixtures/fake_token")))
-        File.write('annotations', "secret/SECRET=\"this/is/very/hidden\"")
+        File.write('annotations', "secret/SECRET=\"this/is/very/hidden\"\npki/example.com=\"pki/issue/example-com?common_name=example.com\"")
         test.call
       end
     end
@@ -91,7 +99,7 @@ describe SecretsClient do
     end
   end
 
-  describe "#process" do
+  describe "#process_secrets" do
     let(:reply) { {data: {vault: 'foo'}}.to_json }
     let(:url) { +'https://foo.bar:8200/v1/secret/apps/this/is/very/hidden' }
 
@@ -100,20 +108,21 @@ describe SecretsClient do
     end
 
     it 'works' do
-      process
+      process_secrets
       File.read("SECRET").must_equal("foo")
     end
 
     it 'logs' do
       logger.unstub(:info)
       logger.expects(:info).with(message: "secrets found", keys: [["SECRET", "this/is/very/hidden"]])
+      logger.expects(:info).with(message: "PKI found", keys: [["example.com", "pki/issue/example-com?common_name=example.com"]])
       logger.expects(:info).with(message: "secrets written")
-      process
+      process_secrets
     end
 
     it 'ignores newline in key name' do
       File.write('annotations', File.read('annotations') + "\n")
-      process
+      process_secrets
       File.read("SECRET").must_equal("foo")
     end
 
@@ -122,7 +131,7 @@ describe SecretsClient do
       request = stub_request(:get, url).to_return(response_body({data: {vault: 'foo'}}.to_json))
       File.write('annotations', File.read('annotations').sub!("hidden", "hi=dden"))
 
-      process
+      process_secrets
 
       File.read("SECRET").must_equal("foo")
       assert_requested request
@@ -130,7 +139,7 @@ describe SecretsClient do
 
     it 'ignores non-secrets' do
       File.write('annotations', File.read('annotations') + "\n" + "OTHER=\"this/is/not/hidden\"")
-      process
+      process_secrets
       assert File.exist?("SECRET")
       refute File.exist?("OTHER")
     end
@@ -140,7 +149,7 @@ describe SecretsClient do
       url.sub!('/apps', '/data/apps') || raise
       request = stub_request(:get, url).to_return(response_body({data: {data: {vault: 'foo'}}}.to_json))
 
-      process
+      process_secrets
 
       File.read("SECRET").must_equal("foo")
       assert_requested request
@@ -148,31 +157,31 @@ describe SecretsClient do
 
     it 'raises when no secrets were used' do
       File.write('annotations', "other-annotation=\"this/is/not/hidden\"")
-      assert_raises(RuntimeError) { process }
+      assert_raises(RuntimeError) { process_secrets }
       refute File.exist?("SECRET")
     end
 
     it "raises when response is invalid" do
       reply.replace({foo: {bar: 1}}.to_json)
-      assert_raises(RuntimeError) { process }
+      assert_raises(RuntimeError) { process_secrets }
     end
 
     it "raises when response is not 200" do
       stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").
         to_return(status: 500)
-      e = assert_raises(RuntimeError) { process }
+      e = assert_raises(RuntimeError) { process_secrets }
       e.message.must_include("Could not POST https://foo.bar:8200/v1/auth/cert/login: 500 /")
     end
 
     it 'raises useful debugging info when a timeout is encountered' do
       stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").to_raise(Net::OpenTimeout)
-      e = assert_raises(RuntimeError) { process }
+      e = assert_raises(RuntimeError) { process_secrets }
       e.message.must_equal("Timeout connecting to https://foo.bar/api/v1/namespaces/default/pods")
     end
 
     it 'raises useful debugging info when reading keys fails' do
       stub_request(:get, url).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
-      e = assert_raises(RuntimeError) { process }
+      e = assert_raises(RuntimeError) { process_secrets }
       e.message.must_include("Error reading key this/is/very/hidden")
       e.message.must_include("The Vault server at `http://foo.com'")
     end
@@ -182,36 +191,52 @@ describe SecretsClient do
       stub_request(:get, url).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
       url2 = url.sub!('very/hidden', 'very/secret') || raise
       stub_request(:get, url2).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
-      e = assert_raises(RuntimeError) { process }
+      e = assert_raises(RuntimeError) { process_secrets }
       e.message.must_include("Error reading key this/is/very/hidden")
       e.message.must_include("Error reading key this/is/very/secret")
     end
 
     describe 'CONSUL_URL' do
       it 'creates a CONSUL_URL secret' do
-        process
+        process_secrets
         File.read("CONSUL_URL").must_equal("http://#{SecretsClient::LINK_LOCAL_IP}:8500")
       end
 
       it 'can be overwritten by the user' do
         File.write('annotations', "secret/CONSUL_URL=\"this/is/very/hidden\"")
-        process
+        process_secrets
         File.read('CONSUL_URL').must_equal 'foo'
       end
     end
 
     describe 'HOST_IP' do
       it 'creates a HOST_IP secret' do
-        process
+        process_secrets
         File.read("HOST_IP").must_equal("10.10.10.10")
       end
 
       it "raises when host ip api call fails" do
         stub_request(:get, "https://foo.bar/api/v1/namespaces/default/pods").
           to_return(status: 500)
-        e = assert_raises(RuntimeError) { process }
+        e = assert_raises(RuntimeError) { process_secrets }
         e.message.must_include("Could not GET https://foo.bar/api/v1/namespaces/default/pod")
       end
+    end
+  end
+
+  describe "#process_pki_certs" do
+    let(:certificate) { "-----BEGIN CERTIFICATE-----\nimma cert\n-----END CERTIFICATE-----" }
+    let(:reply) { {data: {certificate: certificate, serial: 'test'}}.to_json }
+    let(:url) { +'https://foo.bar:8200/v1/pki/issue/example-com' }
+
+    before do
+      stub_request(:put, url).with { |request| request.body == {common_name: 'example.com'}.to_json }.to_return(response_body(reply))
+    end
+
+    it 'works' do
+      process_pki_certs
+      File.read("pki/example.com/serial").must_equal('test')
+      File.read("pki/example.com/certificate.pem").must_equal(certificate)
     end
   end
 end

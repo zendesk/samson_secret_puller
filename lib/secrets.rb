@@ -14,6 +14,7 @@ class SecretsClient
   CERT_AUTH_PATH = '/v1/auth/cert/login'.freeze
   KEY_PARTS = 4
   LINK_LOCAL_IP = '169.254.1.1'.freeze # Kubernetes nodes are configured with this special link-local IP
+  PEM_PREFIX = '-----BEGIN'.freeze
 
   # auth against the server, set a token in the Vault obj
   def initialize(
@@ -48,6 +49,11 @@ class SecretsClient
     @secret_keys = secrets_from_annotations(annotations)
     raise "#{annotations} contains no secrets" if @secret_keys.empty?
     @logger.info(message: "secrets found", keys: @secret_keys)
+
+    @pki_keys = pki_from_annotations(annotations)
+    unless @pki_keys.empty?
+      @logger.info(message: "PKI found", keys: @pki_keys)
+    end
   end
 
   def write_secrets
@@ -80,6 +86,32 @@ class SecretsClient
     # notify primary container that it is now safe to read all secrets
     File.write("#{@output_path}/.done", Time.now.to_s)
     @logger.info(message: "secrets written")
+  end
+
+  def write_pki_certs
+    errors = []
+    pki = @pki_keys.map do |name, path|
+      begin
+        uri_path, data = params_from_path(path)
+        [name, write_to_vault(uri_path, data)]
+      rescue StandardError
+        errors << $!
+      end
+    end
+
+    present_errors(errors)
+
+    pki.each do |name, data|
+      cert_dir = "#{@output_path}/pki/#{name}"
+      FileUtils.mkdir_p cert_dir
+      data.map do |key, value|
+        ext = value.start_with?(PEM_PREFIX) ? '.pem' : ''
+        puts "#{cert_dir}/#{key}#{ext}"
+        File.write("#{cert_dir}/#{key}#{ext}", value)
+      end
+    end
+
+    @logger.info(message: "PKI certificates written")
   end
 
   private
@@ -163,6 +195,21 @@ class SecretsClient
     @vault_v2 ? result.data.fetch(:data).fetch(:vault) : result.data.fetch(:vault)
   end
 
+  def write_to_vault(path, data = {})
+    begin
+      result = with_retries { Vault.logical.write(path, data) }
+    rescue Vault::HTTPClientError
+      $!.message.prepend "Error writing to #{key}\n"
+      raise
+    end
+
+    if !result.respond_to?(:data) || !result.data || !result.data.is_a?(Hash)
+      raise "Bad results returned from vault server for #{key}: #{result.inspect}"
+    end
+
+    result.data
+  end
+
   # keys could include slashes in last part, which we would then be unable to resolve
   # so we encode them
   def normalize_key(key)
@@ -189,6 +236,17 @@ class SecretsClient
     end.compact
   end
 
+  # pki/FOO="a/b/c/z" -> {"FOO" => "a/b/c/d"}
+  def pki_from_annotations(annotations)
+    # TODO: this function is too similar to secrets_from_annotations
+    File.read(annotations).split("\n").map do |line|
+      next unless line.sub! /^pki\//, ""
+      key, path = line.split("=", 2)
+      path.delete!('"')
+      [key, path]
+    end.compact
+  end
+
   # check and see if the authfile is a pem or a token,
   # then act accordingly
   def read_vault_token(authfile_path)
@@ -201,5 +259,13 @@ class SecretsClient
 
   def with_retries(&block)
     Vault.with_retries(Vault::HTTPConnectionError, attempts: 3, &block)
+  end
+
+  def params_from_path(path)
+    uri = URI.parse(path)
+    params = CGI.parse(uri.query).map do |key, value|
+      [key, value.length > 1 ? value : value[0]]
+    end.to_h
+    [uri.path, params]
   end
 end
