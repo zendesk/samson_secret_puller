@@ -1,5 +1,6 @@
 require 'vault'
 require 'openssl'
+require 'fileutils'
 
 # fixed in vault server 0.6.2 https://github.com/hashicorp/vault/pull/1795
 Vault::Client.prepend(Module.new do
@@ -51,9 +52,7 @@ class SecretsClient
     @logger.info(message: "secrets found", keys: @secret_keys)
 
     @pki_keys = pki_from_annotations(annotations)
-    unless @pki_keys.empty?
-      @logger.info(message: "PKI found", keys: @pki_keys)
-    end
+    @logger.info(message: "PKI found", keys: @pki_keys)
   end
 
   def write_secrets
@@ -90,7 +89,7 @@ class SecretsClient
 
   def write_pki_certs
     errors = []
-    pki = @pki_keys.map do |name, path|
+    pkis = @pki_keys.map do |name, path|
       begin
         uri_path, data = params_from_path(path)
         [name, write_to_vault(uri_path, data)]
@@ -101,13 +100,14 @@ class SecretsClient
 
     present_errors(errors)
 
-    pki.each do |name, data|
+    pkis.each do |name, data|
       cert_dir = "#{@output_path}/pki/#{name}"
       FileUtils.mkdir_p cert_dir
       data.map do |key, value|
-        ext = value.start_with?(PEM_PREFIX) ? '.pem' : ''
-        puts "#{cert_dir}/#{key}#{ext}"
-        File.write("#{cert_dir}/#{key}#{ext}", value)
+        ext = value.to_s.start_with?(PEM_PREFIX) ? '.pem' : ''
+        file_path = "#{cert_dir}/#{key}#{ext}"
+        @logger.info(message: "Writing PKI object to #{file_path}")
+        File.write(file_path, value)
       end
     end
 

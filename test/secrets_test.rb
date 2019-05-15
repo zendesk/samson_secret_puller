@@ -9,20 +9,20 @@ ENV["KUBERNETES_PORT_443_TCP_ADDR"] = 'foo.bar'
 ENV["testing"] = "true"
 
 describe SecretsClient do
-  def process_secrets
+  def capture_stdout
     old = $stdout
     $stdout = StringIO.new
-    client.write_secrets
+    yield
   ensure
     $stdout = old
   end
 
+  def process_secrets
+    capture_stdout { client.write_secrets}
+  end
+
   def process_pki_certs
-    old = $stdout
-    $stdout = StringIO.new
-    client.write_pki_certs
-  ensure
-    $stdout = old
+    capture_stdout { client.write_pki_certs }
   end
 
   def response_body(body)
@@ -68,7 +68,10 @@ describe SecretsClient do
         File.write("ca.crt", File.read(Bundler.root.join("test/fixtures/self_signed_testing.pem")))
         File.write("namespace", File.read(Bundler.root.join("test/fixtures/namespace")))
         File.write("token", File.read(Bundler.root.join("test/fixtures/fake_token")))
-        File.write('annotations', "secret/SECRET=\"this/is/very/hidden\"\npki/example.com=\"pki/issue/example-com?common_name=example.com\"")
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/issue/example-com?common_name=example.com"
+        TEXT
         test.call
       end
     end

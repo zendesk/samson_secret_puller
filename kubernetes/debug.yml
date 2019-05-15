@@ -19,6 +19,8 @@ metadata:
     # paste annotations from failing resource here
     # or modify /secretkeys after exec-ing into the pod
     secret/MYSQL_USER: global/global/global/mysql_user
+    # paste PKI annotations here to test PKI resolution
+    # pki/www.my-website.com: pki/issue/my-role?common_name=www.my-website.com
 spec:
   restartPolicy: Never
   volumes:
