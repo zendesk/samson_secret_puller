@@ -53,11 +53,13 @@ class SecretsClient
       )
     end
 
-    @secret_keys = secrets_from_annotations(annotations)
+    annotation_lines = File.read(annotations).split("\n")
+
+    @secret_keys = from_annotations(annotation_lines, /^secret\//)
     raise "#{annotations} contains no secrets" if @secret_keys.empty?
     @logger.info(message: "secrets found", keys: @secret_keys)
 
-    @pki_keys = pki_from_annotations(annotations)
+    @pki_keys = from_annotations(annotation_lines, /^pki\//)
     @logger.info(message: "PKI found", keys: @pki_keys)
   end
 
@@ -188,21 +190,10 @@ class SecretsClient
     end
   end
 
-  # secret/FOO="a/b/c/z" -> {"FOO" => "a/b/c/d"}
-  def secrets_from_annotations(annotations)
-    File.read(annotations).split("\n").map do |line|
-      next unless line.sub! /^secret\//, ""
-      key, path = line.split("=", 2)
-      path.delete!('"')
-      [key, path]
-    end.compact
-  end
-
-  # pki/FOO="a/b/c/z" -> {"FOO" => "a/b/c/d"}
-  def pki_from_annotations(annotations)
-    # TODO: this function is too similar to secrets_from_annotations
-    File.read(annotations).split("\n").map do |line|
-      next unless line.sub! /^pki\//, ""
+  # {re_prefix}/FOO="a/b/c/z" => {"FOO" => "a/b/c/z"}
+  def from_annotations(annotations, re_prefix)
+    annotations.map do |line|
+      next unless line.sub! re_prefix, ""
       key, path = line.split("=", 2)
       path.delete!('"')
       [key, path]
