@@ -9,12 +9,20 @@ ENV["KUBERNETES_PORT_443_TCP_ADDR"] = 'foo.bar'
 ENV["testing"] = "true"
 
 describe SecretsClient do
-  def process
+  def capture_stdout
     old = $stdout
     $stdout = StringIO.new
-    client.write_secrets
+    yield
   ensure
     $stdout = old
+  end
+
+  def process_secrets
+    capture_stdout { client.write_secrets }
+  end
+
+  def process_pki_certs
+    capture_stdout { client.write_pki_certs }
   end
 
   def response_body(body)
@@ -65,7 +73,10 @@ describe SecretsClient do
         File.write("vaultpem", File.read(Bundler.root.join("test/fixtures/self_signed_testing.pem")))
         File.write("ca.crt", File.read(Bundler.root.join("test/fixtures/self_signed_testing.pem")))
         File.write("token", File.read(Bundler.root.join("test/fixtures/fake_token")))
-        File.write('annotations', "secret/SECRET=\"this/is/very/hidden\"")
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+        TEXT
+        # pki/example.com="pki/issue/example-com?common_name=example.com"
         test.call
       end
     end
@@ -107,7 +118,7 @@ describe SecretsClient do
     end
   end
 
-  describe "#process" do
+  describe "#process_secrets" do
     let(:reply) { {data: {vault: 'foo'}}.to_json }
     let(:url) { +'https://foo.bar:8200/v1/secret/apps/this/is/very/hidden' }
 
@@ -116,7 +127,7 @@ describe SecretsClient do
     end
 
     it 'works' do
-      process
+      process_secrets
       File.read("SECRET").must_equal("foo")
     end
 
@@ -124,13 +135,14 @@ describe SecretsClient do
       logger.unstub(:info)
       logger.expects(:info).with(message: "Authenticated with Vault Server", policies: nil, metadata: nil)
       logger.expects(:info).with(message: "secrets found", keys: [["SECRET", "this/is/very/hidden"]])
+      logger.expects(:info).with(message: "PKI found", keys: []) # ["example.com", "pki/issue/example-com?common_name=example.com"]])
       logger.expects(:info).with(message: "secrets written")
-      process
+      process_secrets
     end
 
     it 'ignores newline in key name' do
       File.write('annotations', File.read('annotations') + "\n")
-      process
+      process_secrets
       File.read("SECRET").must_equal("foo")
     end
 
@@ -139,7 +151,7 @@ describe SecretsClient do
       request = stub_request(:get, url).to_return(response_body({data: {vault: 'foo'}}.to_json))
       File.write('annotations', File.read('annotations').sub!("hidden", "hi=dden"))
 
-      process
+      process_secrets
 
       File.read("SECRET").must_equal("foo")
       assert_requested request
@@ -147,7 +159,7 @@ describe SecretsClient do
 
     it 'ignores non-secrets' do
       File.write('annotations', File.read('annotations') + "\n" + "OTHER=\"this/is/not/hidden\"")
-      process
+      process_secrets
       assert File.exist?("SECRET")
       refute File.exist?("OTHER")
     end
@@ -157,7 +169,7 @@ describe SecretsClient do
       url.sub!('/apps', '/data/apps') || raise
       request = stub_request(:get, url).to_return(response_body({data: {data: {vault: 'foo'}}}.to_json))
 
-      process
+      process_secrets
 
       File.read("SECRET").must_equal("foo")
       assert_requested request
@@ -165,26 +177,26 @@ describe SecretsClient do
 
     it 'raises when no secrets were used' do
       File.write('annotations', "other-annotation=\"this/is/not/hidden\"")
-      assert_raises(RuntimeError) { process }
+      assert_raises(RuntimeError) { process_secrets }
       refute File.exist?("SECRET")
     end
 
     it "raises when response is invalid" do
       reply.replace({foo: {bar: 1}}.to_json)
-      assert_raises(RuntimeError) { process }
+      assert_raises(RuntimeError) { process_secrets }
     end
 
     it "raises when response is not 200" do
       stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").
         to_return(status: 500, body: { errors: ["sample error"]}.to_json)
-      e = assert_raises(Vault::HTTPError) { process }
+      e = assert_raises(Vault::HTTPError) { process_secrets }
       e.message.must_include("sample error")
       e.message.must_include("The Vault server at `https://foo.bar:8200'")
     end
 
     it 'raises useful debugging info when reading keys fails' do
       stub_request(:get, url).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
-      e = assert_raises(RuntimeError) { process }
+      e = assert_raises(RuntimeError) { process_secrets }
       e.message.must_include("Error reading key this/is/very/hidden")
       e.message.must_include("The Vault server at `http://foo.com'")
     end
@@ -194,28 +206,223 @@ describe SecretsClient do
       stub_request(:get, url).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
       url2 = url.sub!('very/hidden', 'very/secret') || raise
       stub_request(:get, url2).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
-      e = assert_raises(RuntimeError) { process }
+      e = assert_raises(RuntimeError) { process_secrets }
       e.message.must_include("Error reading key this/is/very/hidden")
       e.message.must_include("Error reading key this/is/very/secret")
     end
 
     describe 'LINK_LOCAL_IP' do
       it 'creates a LINK_LOCAL_IP secret' do
-        process
+        process_secrets
         File.read("LINK_LOCAL_IP").must_equal(SecretsClient::LINK_LOCAL_IP)
       end
     end
 
     describe 'CONSUL_URL' do
       it 'creates a CONSUL_URL secret' do
-        process
+        process_secrets
         File.read("CONSUL_URL").must_equal("http://#{SecretsClient::LINK_LOCAL_IP}:8500")
       end
 
       it 'can be overwritten by the user' do
         File.write('annotations', "secret/CONSUL_URL=\"this/is/very/hidden\"")
-        process
+        process_secrets
         File.read('CONSUL_URL').must_equal 'foo'
+      end
+    end
+  end
+
+  describe '#process_pki_certs' do
+    let(:certificate) { "-----BEGIN CERTIFICATE-----\nimma cert\n-----END CERTIFICATE-----" }
+    let(:private_key) { "-----BEGIN RSA PRIVATE KEY-----\nimma private key\n-----END RSA PRIVATE KEY-----" }
+    let(:private_key_type) { "rsa" }
+    let(:issuing_ca) { "-----BEGIN CERTIFICATE-----\nimma signing cert\n-----END CERTIFICATE-----" }
+    let(:chain_ca) do
+      [
+        "-----BEGIN CERTIFICATE-----\nchain 1\n-----END CERTIFICATE-----",
+        "-----BEGIN CERTIFICATE-----\nchain 2\n-----END CERTIFICATE-----"
+      ]
+    end
+    let(:serial_number) { "63:84:EE:63:75:65:CD:C6:BD:09:AE:A3:EB:AC:E4:50:FA:3E:D4:95" }
+    let(:expiration) { "1559186544" }
+
+    let(:reply) do
+      {
+        data: {
+          certificate: certificate,
+          private_key: private_key,
+          private_key_type: private_key_type,
+          issuing_ca: issuing_ca,
+          chain_ca: chain_ca,
+          serial_number: serial_number,
+          expiration: expiration
+        }
+      }.to_json
+    end
+    let(:reply_without_chain_ca) do
+      {
+        data: {
+          certificate: certificate,
+          private_key: private_key,
+          private_key_type: private_key_type,
+          issuing_ca: issuing_ca,
+          serial_number: serial_number,
+          expiration: expiration
+        }
+      }.to_json
+    end
+    let(:url) { +'https://foo.bar:8200/v1/pki/issue/example-com' }
+    let(:root_ca_url) { +'https://foo.bar:8200/v1/root-pki/issue/test-com' }
+    let(:dne_url) { +'https://foo.bar:8200/v1/pki/does/not/exist' }
+
+    before do
+      stub_request(:put, url).
+        with { |request| request.body == {common_name: 'example.com'}.to_json }.
+        to_return(body: reply, headers: {'Content-Type': 'application/json'})
+
+      stub_request(:put, root_ca_url).
+        with { |request| request.body == {common_name: 'test.com'}.to_json }.
+        to_return(body: reply_without_chain_ca, headers: {'Content-Type': 'application/json'})
+    end
+
+    it 'writes all files to the named PKI directory' do
+      File.write('annotations', <<~TEXT)
+        secret/SECRET="this/is/very/hidden"
+        pki/example.com="pki/issue/example-com?common_name=example.com"
+      TEXT
+
+      process_pki_certs
+
+      File.read("pki/example.com/certificate.pem").must_equal(certificate)
+      File.read("pki/example.com/private_key.pem").must_equal(private_key)
+      File.read("pki/example.com/private_key_type").must_equal(private_key_type)
+      File.read("pki/example.com/issuing_ca.pem").must_equal(issuing_ca)
+      File.read("pki/example.com/chain_ca.pem").must_equal(chain_ca.join("\n"))
+      File.read("pki/example.com/serial_number").must_equal(serial_number)
+      File.read("pki/example.com/expiration").must_equal(expiration)
+    end
+
+    it 'does not write chain_ca.pem if response does not contain chain_ca' do
+      File.write('annotations', <<~TEXT)
+        secret/SECRET="this/is/very/hidden"
+        pki/test.com="root-pki/issue/test-com?common_name=test.com"
+      TEXT
+
+      process_pki_certs
+
+      refute File.exist? "pki/test.com/chain_ca.pem"
+
+      File.read("pki/test.com/certificate.pem").must_equal(certificate)
+      File.read("pki/test.com/private_key.pem").must_equal(private_key)
+      File.read("pki/test.com/private_key_type").must_equal(private_key_type)
+      File.read("pki/test.com/issuing_ca.pem").must_equal(issuing_ca)
+      File.read("pki/test.com/serial_number").must_equal(serial_number)
+      File.read("pki/test.com/expiration").must_equal(expiration)
+    end
+
+    context 'exercise #split_url' do
+      before do
+        stub_request(:put, +'https://foo.bar:8200/v1/pki/issue/request-empty').
+          with { |request| request.body == {}.to_json }.
+          to_return(body: reply, headers: {'Content-Type': 'application/json'})
+
+        stub_request(:put, +'https://foo.bar:8200/v1/pki/issue/request-csv-params').
+          with { |request| request.body == {ip_sans: "127.0.0.1,10.10.0.12"}.to_json }.
+          to_return(body: reply, headers: {'Content-Type': 'application/json'})
+
+        stub_request(:put, +'https://foo.bar:8200/v1/pki/issue/request-array-params').
+          with { |request| request.body == {name: ["foo", "bar"]}.to_json }.
+          to_return(body: reply, headers: {'Content-Type': 'application/json'})
+      end
+
+      it 'works without query params' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/issue/request-empty"
+        TEXT
+
+        process_pki_certs
+        File.read("pki/example.com/serial_number").must_equal(serial_number)
+      end
+
+      it 'works with query param csv' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/issue/request-csv-params?ip_sans=127.0.0.1,10.10.0.12"
+        TEXT
+
+        process_pki_certs
+        File.read("pki/example.com/serial_number").must_equal(serial_number)
+      end
+
+      it 'works with query param arrays' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/issue/request-array-params?name=foo&name=bar"
+        TEXT
+
+        process_pki_certs
+        File.read("pki/example.com/serial_number").must_equal(serial_number)
+      end
+
+      it 'works with multiple subdirs' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/test/example.com="pki/issue/example-com?common_name=example.com"
+        TEXT
+
+        process_pki_certs
+        File.read("pki/test/example.com/serial_number").must_equal(serial_number)
+      end
+    end
+
+    context 'exercise #vault_write errors' do
+      before do
+        stub_request(:put, url).
+          with { |request| request.body == {common_name: 'fail'}.to_json }.
+          to_return(body: {errors: ["common name fail not allowed by this role"]}.to_json, status: 400, headers: {'Content-Type': 'application/json'})
+
+        stub_request(:put, dne_url).
+          to_return(body: {errors: ["no handler for route 'pki/does/not/exist"]}.to_json, status: 404, headers: {'Content-Type': 'application/json'})
+
+        stub_request(:put, +'https://foo.bar:8200/v1/nil').
+          to_return(body: {data: nil}.to_json, status: 200, headers: {'Content-Type': 'application/json'})
+      end
+
+      it 'handles 404 response' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/does/not/exist"
+        TEXT
+
+        err = assert_raises Vault::HTTPClientError do
+          process_pki_certs
+        end
+        assert_match /Error writing to pki\/does\/not\/exist/, err.message
+      end
+
+      it 'handles bad response data' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/issue/example-com?common_name=fail"
+        TEXT
+
+        err = assert_raises Vault::HTTPClientError do
+          process_pki_certs
+        end
+        assert_match /Error writing to pki\/issue\/example-com/, err.message
+      end
+
+      it 'handles nil response data' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="nil"
+        TEXT
+
+        err = assert_raises RuntimeError do
+          process_pki_certs
+        end
+        assert_match /Bad results returned from vault server for nil/, err.message
       end
     end
   end

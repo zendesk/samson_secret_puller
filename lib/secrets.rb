@@ -1,5 +1,6 @@
 require 'vault'
 require 'openssl'
+require 'fileutils'
 
 # fixed in vault server 0.6.2 https://github.com/hashicorp/vault/pull/1795
 Vault::Client.prepend(Module.new do
@@ -52,9 +53,14 @@ class SecretsClient
       )
     end
 
-    @secret_keys = secrets_from_annotations(annotations)
+    annotation_lines = File.read(annotations).split("\n")
+
+    @secret_keys = from_annotations(annotation_lines, /^secret\//)
     raise "#{annotations} contains no secrets" if @secret_keys.empty?
     @logger.info(message: "secrets found", keys: @secret_keys)
+
+    @pki_keys = from_annotations(annotation_lines, /^pki\//)
+    @logger.info(message: "PKI found", keys: @pki_keys)
   end
 
   def write_secrets
@@ -85,6 +91,36 @@ class SecretsClient
     # notify primary container that it is now safe to read all secrets
     File.write("#{@output_path}/.done", Time.now.to_s)
     @logger.info(message: "secrets written")
+  end
+
+  def write_pki_certs
+    errors = []
+    pkis = @pki_keys.map do |name, path|
+      begin
+        uri_path, data = split_url(path)
+        [name, write_to_vault(uri_path, data)]
+      rescue StandardError
+        errors << $!
+      end
+    end
+
+    raise_errors(errors)
+
+    pkis.each do |name, data|
+      cert_dir = "#{@output_path}/pki/#{name}"
+      FileUtils.mkdir_p cert_dir
+
+      File.write("#{cert_dir}/certificate.pem", data[:certificate])
+      File.write("#{cert_dir}/expiration", data[:expiration])
+      File.write("#{cert_dir}/issuing_ca.pem", data[:issuing_ca])
+      File.write("#{cert_dir}/private_key.pem", data[:private_key])
+      File.write("#{cert_dir}/private_key_type", data[:private_key_type])
+      File.write("#{cert_dir}/serial_number", data[:serial_number])
+      if data[:chain_ca]
+        File.write("#{cert_dir}/chain_ca.pem", data[:chain_ca].join("\n"))
+      end
+    end
+    @logger.info(message: "PKI certificates written")
   end
 
   private
@@ -121,6 +157,23 @@ class SecretsClient
     @vault_v2 ? result.data.fetch(:data).fetch(:vault) : result.data.fetch(:vault)
   end
 
+  def write_to_vault(path, data)
+    begin
+      result = @vault.with_retries(Vault::HTTPConnectionError, attempts: 3) do
+        @vault.logical.write(path, data)
+      end
+    rescue Vault::HTTPClientError
+      $!.message.prepend "Error writing to #{path}\n"
+      raise
+    end
+
+    if !result.respond_to?(:data) || !result.data.is_a?(Hash)
+      raise "Bad results returned from vault server for #{path}: #{result.inspect}"
+    end
+
+    result.data
+  end
+
   # keys could include slashes in last part, which we would then be unable to resolve
   # so we encode them
   def normalize_key(key)
@@ -137,10 +190,10 @@ class SecretsClient
     end
   end
 
-  # secret/FOO="a/b/c/z" -> {"FOO" => "a/b/c/d"}
-  def secrets_from_annotations(annotations)
-    File.read(annotations).split("\n").map do |line|
-      next unless line.sub! /^secret\//, ""
+  # {re_prefix}/FOO="a/b/c/z" => {"FOO" => "a/b/c/z"}
+  def from_annotations(annotations, re_prefix)
+    annotations.map do |line|
+      next unless line.sub! re_prefix, ""
       key, path = line.split("=", 2)
       path.delete!('"')
       [key, path]
@@ -177,5 +230,24 @@ class SecretsClient
     end
 
     @logger.info(message: "Authenticated with Vault Server", policies: auth_data.policies, metadata: auth_data.metadata)
+  end
+
+  # splits the given url; returning
+  #  1) the URL path, and
+  #  2) a hash containing the URL query parameters, when the
+  #     URL contains no query paramets an empty hash is returned
+  #
+  # "pki/issue/cert?common_name=foo&ip_sans=127.0.0.1" ->
+  #   [ "pki/issue/cert", { "common_name":"foo", "ip_sans":"127.0.0.1" } ]
+  def split_url(path)
+    uri = URI.parse(path)
+    if uri.query.nil?
+      [uri.path, {}]
+    else
+      payload = CGI.parse(uri.query).map do |key, value|
+        [key, value.length > 1 ? value : value[0]]
+      end.to_h
+      [uri.path, payload]
+    end
   end
 end
