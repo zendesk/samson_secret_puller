@@ -1,5 +1,5 @@
-# FROM ruby:2.6.2-alpine
-FROM ruby@sha256:9fee6680610546f3f50e3d00e63ca73b53f6bc04a2b0ed4cd70b126956358e4e
+# FROM ruby:2.6.3-alpine
+FROM ruby@sha256:2749716577d81ef71bc487dfd35962bb067ca11a1b9d6d6d81f8ff7cc3e03f60
 
 WORKDIR /app
 
