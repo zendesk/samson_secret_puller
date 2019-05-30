@@ -15,7 +15,6 @@ class SecretsClient
   CERT_AUTH_PATH = '/v1/auth/cert/login'.freeze
   KEY_PARTS = 4
   LINK_LOCAL_IP = '169.254.1.1'.freeze # Kubernetes nodes are configured with this special link-local IP
-  PEM_PREFIX = '-----BEGIN'.freeze
 
   # auth against the server, set a token in the Vault obj
   def initialize(
@@ -75,7 +74,7 @@ class SecretsClient
       end
     end
 
-    present_errors(errors)
+    raise_errors(errors)
 
     # Write out user defined secrets
     secrets.each do |key, secret|
@@ -91,32 +90,35 @@ class SecretsClient
     errors = []
     pkis = @pki_keys.map do |name, path|
       begin
-        uri_path, data = params_from_path(path)
+        uri_path, data = split_url(path)
         [name, write_to_vault(uri_path, data)]
       rescue StandardError
         errors << $!
       end
     end
 
-    present_errors(errors)
+    raise_errors(errors)
 
     pkis.each do |name, data|
       cert_dir = "#{@output_path}/pki/#{name}"
       FileUtils.mkdir_p cert_dir
-      data.map do |key, value|
-        ext = value.to_s.start_with?(PEM_PREFIX) ? '.pem' : ''
-        file_path = "#{cert_dir}/#{key}#{ext}"
-        @logger.info(message: "Writing PKI object to #{file_path}")
-        File.write(file_path, value)
+
+      File.write("#{cert_dir}/certificate.pem", data[:certificate])
+      File.write("#{cert_dir}/expiration", data[:expiration])
+      File.write("#{cert_dir}/issuing_ca.pem", data[:issuing_ca])
+      File.write("#{cert_dir}/private_key.pem", data[:private_key])
+      File.write("#{cert_dir}/private_key_type", data[:private_key_type])
+      File.write("#{cert_dir}/serial_number", data[:serial_number])
+      if data[:chain_ca]
+        File.write("#{cert_dir}/chain_ca.pem", data[:chain_ca].join("\n"))
       end
     end
-
     @logger.info(message: "PKI certificates written")
   end
 
   private
 
-  def present_errors(errors)
+  def raise_errors(errors)
     if errors.size == 1
       # regular error display with full backtrace
       raise errors.first
@@ -195,16 +197,16 @@ class SecretsClient
     @vault_v2 ? result.data.fetch(:data).fetch(:vault) : result.data.fetch(:vault)
   end
 
-  def write_to_vault(path, data = {})
+  def write_to_vault(path, data)
     begin
       result = with_retries { Vault.logical.write(path, data) }
     rescue Vault::HTTPClientError
-      $!.message.prepend "Error writing to #{key}\n"
+      $!.message.prepend "Error writing to #{path}\n"
       raise
     end
 
-    if !result.respond_to?(:data) || !result.data || !result.data.is_a?(Hash)
-      raise "Bad results returned from vault server for #{key}: #{result.inspect}"
+    if !result.respond_to?(:data) || !result.data.is_a?(Hash)
+      raise "Bad results returned from vault server for #{path}: #{result.inspect}"
     end
 
     result.data
@@ -261,11 +263,22 @@ class SecretsClient
     Vault.with_retries(Vault::HTTPConnectionError, attempts: 3, &block)
   end
 
-  def params_from_path(path)
+  # splits the given url; returning
+  #  1) the URL path, and
+  #  2) a hash containing the URL query parameters, when the
+  #     URL contains no query paramets an empty hash is returned
+  #
+  # "pki/issue/cert?common_name=foo&ip_sans=127.0.0.1" ->
+  #   [ "pki/issue/cert", { "common_name":"foo", "ip_sans":"127.0.0.1" } ]
+  def split_url(path)
     uri = URI.parse(path)
-    params = CGI.parse(uri.query).map do |key, value|
-      [key, value.length > 1 ? value : value[0]]
-    end.to_h
-    [uri.path, params]
+    if uri.query.nil?
+      [uri.path, {}]
+    else
+      payload = CGI.parse(uri.query).map do |key, value|
+        [key, value.length > 1 ? value : value[0]]
+      end.to_h
+      [uri.path, payload]
+    end
   end
 end
