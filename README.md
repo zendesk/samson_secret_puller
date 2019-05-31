@@ -16,6 +16,8 @@ VAULT_AUTH_PATH: optional, allows specifing a custom vault auth path, defaults t
 VAULT_AUTH_ROLE: optional, the role against which Vault login should be attempted (required where VAULT_AUTH_TYPE=kubernetes)
 VAULT_TLS_VERIFY: optional, whether to verify ssl when talking to vault, defaults to false
 VAULT_KV_V2: optional, wether this is vault kv v2, defaults to false
+VAULT_MOUNT: optional, which mount to use, defaults to "secret"
+VAULT_PREFIX: optional, which prefix to use, defaults to "apps"
 SIDECAR_SECRET_PATH: optional, where to store the secrets on disk, defaults to  '/secrets'
 SECRET_ANNOTATIONS: optional, where to read annotations from, defaults to '/secretkeys/annotations'
 SERVICEACCOUNT_DIR: optional, where to service account from, defaults to '/var/run/secrets/kubernetes.io/serviceaccount/'

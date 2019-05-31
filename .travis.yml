@@ -5,6 +5,7 @@ branches:
   only: master
 before_script:
 - docker -v
+- docker build -t secret_tester .
 - docker build -t secret_tester -f Dockerfile.dev .
 script: docker run -it --rm secret_tester bundle exec rake $TASK
 env:
