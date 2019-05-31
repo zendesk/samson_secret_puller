@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-ruby File.read(Bundler.root.join('.ruby-version')).strip
+ruby "~> #{File.read(Bundler.root.join('.ruby-version'))[/\d+\.\d/]}"
 
 gem 'vault', ">= 0.5.0"
 

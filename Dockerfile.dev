@@ -1,5 +1,4 @@
-# FROM ruby:2.6.3-alpine
-FROM ruby@sha256:2749716577d81ef71bc487dfd35962bb067ca11a1b9d6d6d81f8ff7cc3e03f60
+FROM ruby:2.6-alpine
 
 RUN apk add --update --no-cache bash curl openssl elixir erlang-crypto
 
