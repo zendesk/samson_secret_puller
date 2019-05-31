@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative 'test_helper'
 require 'rack'
 require 'json'
@@ -21,7 +23,6 @@ describe 'CRON' do
       '/auth' => {}
     }
   end
-
   let(:kuber_replies) do
     {
       '/api/v1/namespaces/default/secrets/vaultauth' => {},
@@ -30,8 +31,8 @@ describe 'CRON' do
 
   around do |test|
     WebMock.disable!
-    FakeServer.open(8200, vault_replies) do |vault|
-      FakeServer.open(8443, kuber_replies) do |kube|
+    StubServer.open(8200, vault_replies) do |vault|
+      StubServer.open(8443, kuber_replies) do |kube|
         vault.wait
         kube.wait
         with_env(

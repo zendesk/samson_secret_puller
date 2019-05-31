@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'bundler/setup'
 
 require 'single_cov'
@@ -6,7 +8,8 @@ SingleCov.setup :minitest
 require 'maxitest/autorun'
 require 'webmock/minitest'
 require 'tmpdir'
-require 'mocha/mini_test'
+require 'mocha/minitest'
+require 'stub_server'
 
 def root
   Bundler.root.to_s
@@ -27,56 +30,5 @@ Minitest::Test.class_eval do
     result = `#{command} 2>&1`
     raise "FAILED #{result}" if $?.success? == fail
     result
-  end
-end
-
-class FakeServer
-  def self.open(port, replies)
-    server = new(port, replies)
-    server.boot
-    yield server
-  ensure
-    server.shutdown
-  end
-
-  def initialize(port, replies)
-    @port = port
-    @replies = replies
-  end
-
-  def boot
-    Thread.new do
-      Rack::Handler::WEBrick.run(
-        self,
-        Port: @port,
-        Logger: WEBrick::Log.new("/dev/null"),
-        AccessLog: []
-      ) { |s| @server = s }
-    end
-  end
-
-  def wait
-    Timeout.timeout(10) do
-      loop do
-        begin
-          TCPSocket.new('localhost', @port)&.close
-          break
-        rescue Errno::ECONNREFUSED, Errno::EADDRNOTAVAIL
-        end
-      end
-    end
-  end
-
-  def call(env)
-    path = env.fetch("PATH_INFO")
-    unless reply = @replies[path]
-      puts "ERROR: Missing reply for path #{path}" # kubeclient does not show current url when failing
-      raise
-    end
-    [200, {'Content-Type' => 'application/json'}, [reply.to_json]]
-  end
-
-  def shutdown
-    @server&.shutdown
   end
 end

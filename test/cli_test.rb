@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative 'test_helper'
 require 'open-uri'
 require 'timeout'
@@ -19,10 +21,13 @@ describe "CLI" do
 
   around do |test|
     WebMock.disable!
-    FakeServer.open(port, replies) do |server|
-      server.wait
+
+    replies = Hash[replies().map { |k, v| [k, [200, {'Content-Type' => 'application/json'}, [v.to_json]]] }]
+    StubServer.open(port, replies) do |server|
+      server.wait # ~ 0.1s
       test.call
     end
+
     WebMock.enable!
   end
 

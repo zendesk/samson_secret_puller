@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative 'test_helper'
 
 SingleCov.covered!
@@ -62,9 +64,9 @@ describe SecretsClient do
   before do
     logger.stubs(:info)
     stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").
-      to_return(body: auth_reply)
+      to_return(response_body(auth_reply))
     stub_request(:get, "https://foo.bar:8200/v1/auth/token/lookup-self").
-      to_return(body: token_reply)
+      to_return(response_body(token_reply))
   end
 
   around do |test|
@@ -93,7 +95,7 @@ describe SecretsClient do
 
     it "works with a serviceaccount" do
       stub_request(:post, "https://foo.bar:8200/v1/auth/kubernetes/login").
-        to_return(body: auth_reply)
+        to_return(response_body(auth_reply))
       serviceaccount_client
     end
 
@@ -109,12 +111,23 @@ describe SecretsClient do
 
     it "fails to initialize with missing annotations" do
       File.delete('annotations')
-      assert_raises(RuntimeError) { client }
+      assert_raises(ArgumentError) { client }
     end
 
     it "fails to initialize with invalid type" do
-      client_options[:vault_auth_type] = "foobar"
-      assert_raises(RuntimeError) { SecretsClient.new(client_options) }
+      assert_raises(ArgumentError) { SecretsClient.new(client_options.merge(vault_auth_type: "foobar")) }
+    end
+
+    it "fails to initialize without url" do
+      assert_raises(ArgumentError) { SecretsClient.new(client_options.merge(vault_address: nil)) }
+    end
+
+    it "fails to initialize without api_url" do
+      assert_raises(ArgumentError) { SecretsClient.new(client_options.merge(api_url: nil)) }
+    end
+
+    it "fails to initialize when serviceaccount_dir is missing" do
+      assert_raises(ArgumentError) { SecretsClient.new(client_options.merge(serviceaccount_dir: "foo")) }
     end
   end
 
@@ -177,7 +190,7 @@ describe SecretsClient do
 
     it 'raises when no secrets were used' do
       File.write('annotations', "other-annotation=\"this/is/not/hidden\"")
-      assert_raises(RuntimeError) { process_secrets }
+      assert_raises(ArgumentError) { process_secrets }
       refute File.exist?("SECRET")
     end
 
