@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 name = "samson_secret_puller"
 
 Gem::Specification.new name, "1.1.1" do |s|
@@ -7,5 +9,5 @@ Gem::Specification.new name, "1.1.1" do |s|
   s.homepage = "https://github.com/zendesk/#{name}"
   s.files = `git ls-files lib MIT-LICENSE.txt`.split("\n")
   s.license = "MIT"
-  s.required_ruby_version = '>= 1.9.3'
+  s.required_ruby_version = '>= 2.4'
 end

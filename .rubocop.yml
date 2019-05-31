@@ -1,24 +1,14 @@
 AllCops:
-  DisplayCopNames: true
   TargetRubyVersion: 2.4
   UseCache: false
   Exclude:
     - vendor/**/*
 
-LineLength:
-  Max: 120
-
-ClassLength:
-  Enabled: false
-
-Layout/CommentIndentation:
+Metrics:
   Enabled: false
 
 Style/StringLiterals:
   Enabled: false
-
-HashSyntax:
-   EnforcedStyle: ruby19
 
 Style/SignalException:
   Enabled: false
@@ -35,13 +25,10 @@ Style/Lambda:
 Style/SpecialGlobalVars:
   Enabled: false
 
-Metrics:
-  Enabled: false
-
 Style/WordArray:
-  Enabled: false
+  EnforcedStyle: brackets
 
-Lint/EndAlignment:
+Layout/EndAlignment:
   EnforcedStyleAlignWith: variable
 
 Style/StringLiteralsInInterpolation:
@@ -50,10 +37,13 @@ Style/StringLiteralsInInterpolation:
 Style/NumericLiterals:
   Enabled: false
 
-Layout/FirstParameterIndentation:
+Layout/IndentFirstArgument:
   Enabled: false
 
-Layout/IndentHash:
+Layout/IndentFirstHashElement:
+  Enabled: false
+
+Layout/EmptyLineAfterGuardClause:
   Enabled: false
 
 Layout/AlignParameters:
@@ -69,7 +59,7 @@ Style/Documentation:
   Enabled: false
 
 Layout/MultilineMethodCallIndentation:
-  Enabled: false
+  EnforcedStyle: indented
 
 Lint/AmbiguousRegexpLiteral:
   Enabled: false
@@ -79,13 +69,6 @@ Layout/DotPosition:
 
 Style/ClassAndModuleChildren:
   Enabled: false
-
-# %w[] shows that it will return an array
-Style/PercentLiteralDelimiters:
-  PreferredDelimiters:
-    '%i': '[]'
-    '%w': '[]'
-    '%W': '[]'
 
 # for single `/` more readable
 Style/RegexpLiteral:
@@ -103,13 +86,13 @@ Style/Semicolon:
 Style/GuardClause:
   Enabled: false
 
-Lint/AssignmentInCondition:
-  Enabled: false
-
 Style/SingleLineBlockParams:
   Enabled: false
 
-Style/TrailingCommaInLiteral:
+Style/TrailingCommaInArrayLiteral:
+  Enabled: false
+
+Style/TrailingCommaInHashLiteral:
   Enabled: false
 
 Style/PerlBackrefs:
@@ -121,14 +104,8 @@ Style/IfUnlessModifier:
 Lint/ShadowingOuterLocalVariable:
   Enabled: false
 
-Style/FrozenStringLiteralComment:
-  Enabled: false
-
-Lint/HandleExceptions:
-  Enabled: false
-
 Bundler/OrderedGems:
   Enabled: false
 
 Style/SymbolArray:
-  Enabled: false
+  EnforcedStyle: brackets

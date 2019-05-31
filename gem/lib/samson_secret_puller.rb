@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'forwardable'
 
 module SamsonSecretPuller
-  FOLDER = '/secrets'.freeze
+  FOLDER = '/secrets'
 
   ENV = ENV # store a copy since we might replace ENV on Object
 
@@ -64,9 +66,7 @@ module SamsonSecretPuller
     def read_secrets
       return {} unless File.exist?(FOLDER)
       Dir.glob("#{FOLDER}/*").each_with_object({}) do |file, all|
-        name = File.basename(file)
-        next if name.start_with?(".") # ignore .done and maybe others
-        all[name] = File.read(file).strip
+        all[File.basename(file)] = File.read(file).strip
       end
     end
   end

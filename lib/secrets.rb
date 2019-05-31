@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'vault'
 require 'openssl'
 require 'fileutils'
@@ -5,7 +7,7 @@ require 'fileutils'
 # fixed in vault server 0.6.2 https://github.com/hashicorp/vault/pull/1795
 Vault::Client.prepend(Module.new do
   def success(response)
-    response.content_type = 'application/json' if response.body&.start_with?('{', '[')
+    response.content_type = 'application/json' if response.body&.start_with?('{', '[') # uncovered
     super
   end
 end)
@@ -13,7 +15,7 @@ end)
 class SecretsClient
   ENCODINGS = {"/" => "%2F"}.freeze
   KEY_PARTS = 4
-  LINK_LOCAL_IP = '169.254.1.1'.freeze # Kubernetes nodes are configured with this special link-local IP
+  LINK_LOCAL_IP = '169.254.1.1' # Kubernetes nodes are configured with this special link-local IP
 
   # auth against the server, set a token in the Vault obj
   def initialize(
@@ -21,10 +23,10 @@ class SecretsClient
     ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:, logger:,
     vault_auth_type: 'token', vault_auth_path: nil, vault_auth_role: nil, vault_authfile_path: nil
   )
-    raise "vault address not found" if vault_address.nil?
-    raise "annotations file not found" unless File.exist?(annotations.to_s)
-    raise "serviceaccount dir #{serviceaccount_dir} not found" unless Dir.exist?(serviceaccount_dir.to_s)
-    raise "api_url is null" if api_url.nil?
+    raise ArgumentError, "vault address not found" if vault_address.nil?
+    raise ArgumentError, "annotations file not found" unless File.exist?(annotations.to_s)
+    raise ArgumentError, "serviceaccount dir #{serviceaccount_dir} not found" unless Dir.exist?(serviceaccount_dir.to_s)
+    raise ArgumentError, "api_url is null" if api_url.nil?
 
     @vault_mount = vault_mount
     @vault_prefix = vault_prefix
@@ -56,7 +58,7 @@ class SecretsClient
     annotation_lines = File.read(annotations).split("\n")
 
     @secret_keys = from_annotations(annotation_lines, /^secret\//)
-    raise "#{annotations} contains no secrets" if @secret_keys.empty?
+    raise ArgumentError, "#{annotations} contains no secrets" if @secret_keys.empty?
     @logger.info(message: "secrets found", keys: @secret_keys)
 
     @pki_keys = from_annotations(annotation_lines, /^pki\//)
@@ -159,7 +161,7 @@ class SecretsClient
 
   def write_to_vault(path, data)
     begin
-      result = @vault.with_retries(Vault::HTTPConnectionError, attempts: 3) do
+      result = @vault.with_retries(Vault::HTTPConnectionError, Vault::PersistentHTTP::Error, attempts: 3) do
         @vault.logical.write(path, data)
       end
     rescue Vault::HTTPClientError
@@ -218,7 +220,7 @@ class SecretsClient
       client.token = File.read(vault_authfile_path)
       json = client.get("/v1/auth/token/lookup-self")
     else
-      raise "Unsupported Vault Auth Type: #{vault_auth_type}"
+      raise ArgumentError, "Unsupported Vault Auth Type: #{vault_auth_type}"
     end
 
     secret = Vault::Secret.decode(json)

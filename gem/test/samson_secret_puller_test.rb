@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative 'test_helper'
 require_relative '../lib/samson_secret_puller'
 require 'tmpdir'
@@ -63,8 +65,18 @@ describe SamsonSecretPuller do
     SamsonSecretPuller['FOO'].must_equal 'bar'
   end
 
-  it "fails to read secrets" do
+  it "fails to read missing secrets" do
     SamsonSecretPuller['FOO2'].must_be_nil
+  end
+
+  it "reads when folder is missing" do
+    FileUtils.rm_rf("secrets")
+    SamsonSecretPuller['FOO'].must_be_nil
+  end
+
+  it "ignores . files" do
+    File.write('secrets/.done', 'bar')
+    SamsonSecretPuller['.done'].must_be_nil
   end
 
   it "falls back to ENV" do
