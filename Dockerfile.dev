@@ -13,7 +13,7 @@ COPY bin /app/bin
 COPY lib /app/lib
 
 # test
-COPY Rakefile .travis.yml .rubocop.yml ./
+COPY Rakefile .travis.yml .rubocop.yml README.md Dockerfile Dockerfile.dev ./
 COPY test /app/test
 
 # clients

@@ -4,7 +4,7 @@ WORKDIR /app
 
 # bundle
 COPY .ruby-version Gemfile Gemfile.lock ./
-RUN bundle install --quiet --jobs 4
+RUN bundle install --quiet --jobs 4 --without test
 
 # code
 COPY bin /app/bin
