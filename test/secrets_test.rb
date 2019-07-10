@@ -43,6 +43,7 @@ describe SecretsClient do
       output_path: Dir.pwd,
       api_url: 'https://foo.bar',
       vault_v2: false,
+      pod_hostname: 'example.com',
       logger: logger
     }
   end
@@ -250,7 +251,7 @@ describe SecretsClient do
     let(:private_key) { "-----BEGIN RSA PRIVATE KEY-----\nimma private key\n-----END RSA PRIVATE KEY-----" }
     let(:private_key_type) { "rsa" }
     let(:issuing_ca) { "-----BEGIN CERTIFICATE-----\nimma signing cert\n-----END CERTIFICATE-----" }
-    let(:chain_ca) do
+    let(:ca_chain) do
       [
         "-----BEGIN CERTIFICATE-----\nchain 1\n-----END CERTIFICATE-----",
         "-----BEGIN CERTIFICATE-----\nchain 2\n-----END CERTIFICATE-----"
@@ -266,13 +267,13 @@ describe SecretsClient do
           private_key: private_key,
           private_key_type: private_key_type,
           issuing_ca: issuing_ca,
-          chain_ca: chain_ca,
+          ca_chain: ca_chain,
           serial_number: serial_number,
           expiration: expiration
         }
       }.to_json
     end
-    let(:reply_without_chain_ca) do
+    let(:reply_without_ca_chain) do
       {
         data: {
           certificate: certificate,
@@ -295,7 +296,7 @@ describe SecretsClient do
 
       stub_request(:put, root_ca_url).
         with { |request| request.body == {common_name: 'test.com'}.to_json }.
-        to_return(body: reply_without_chain_ca, headers: {'Content-Type': 'application/json'})
+        to_return(body: reply_without_ca_chain, headers: {'Content-Type': 'application/json'})
     end
 
     it 'writes all files to the named PKI directory' do
@@ -310,12 +311,12 @@ describe SecretsClient do
       File.read("pki/example.com/private_key.pem").must_equal(private_key)
       File.read("pki/example.com/private_key_type").must_equal(private_key_type)
       File.read("pki/example.com/issuing_ca.pem").must_equal(issuing_ca)
-      File.read("pki/example.com/chain_ca.pem").must_equal(chain_ca.join("\n"))
+      File.read("pki/example.com/ca_chain.pem").must_equal(ca_chain.join("\n"))
       File.read("pki/example.com/serial_number").must_equal(serial_number)
       File.read("pki/example.com/expiration").must_equal(expiration)
     end
 
-    it 'does not write chain_ca.pem if response does not contain chain_ca' do
+    it 'does not write ca_chain.pem if response does not contain ca_chain' do
       File.write('annotations', <<~TEXT)
         secret/SECRET="this/is/very/hidden"
         pki/test.com="root-pki/issue/test-com?common_name=test.com"
@@ -323,7 +324,7 @@ describe SecretsClient do
 
       process_pki_certs
 
-      refute File.exist? "pki/test.com/chain_ca.pem"
+      refute File.exist? "pki/test.com/ca_chain.pem"
 
       File.read("pki/test.com/certificate.pem").must_equal(certificate)
       File.read("pki/test.com/private_key.pem").must_equal(private_key)
@@ -342,10 +343,6 @@ describe SecretsClient do
         stub_request(:put, +'https://foo.bar:8200/v1/pki/issue/request-csv-params').
           with { |request| request.body == {ip_sans: "127.0.0.1,10.10.0.12"}.to_json }.
           to_return(body: reply, headers: {'Content-Type': 'application/json'})
-
-        stub_request(:put, +'https://foo.bar:8200/v1/pki/issue/request-array-params').
-          with { |request| request.body == {name: ["foo", "bar"]}.to_json }.
-          to_return(body: reply, headers: {'Content-Type': 'application/json'})
       end
 
       it 'works without query params' do
@@ -362,16 +359,6 @@ describe SecretsClient do
         File.write('annotations', <<~TEXT)
           secret/SECRET="this/is/very/hidden"
           pki/example.com="pki/issue/request-csv-params?ip_sans=127.0.0.1,10.10.0.12"
-        TEXT
-
-        process_pki_certs
-        File.read("pki/example.com/serial_number").must_equal(serial_number)
-      end
-
-      it 'works with query param arrays' do
-        File.write('annotations', <<~TEXT)
-          secret/SECRET="this/is/very/hidden"
-          pki/example.com="pki/issue/request-array-params?name=foo&name=bar"
         TEXT
 
         process_pki_certs
@@ -436,6 +423,168 @@ describe SecretsClient do
           process_pki_certs
         end
         assert_match /Bad results returned from vault server for nil/, err.message
+      end
+    end
+
+    context 'exercise pod data injection' do
+      it 'includes pod ip address in cert issue request' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/issue/example-com?common_name=example.com&pod_ip_as_san=true"
+        TEXT
+
+        stub_req = stub_request(:put, url).
+          with { |request| request.body == {common_name: 'example.com', ip_sans: '127.0.0.1'}.to_json }.
+          to_return(body: reply, headers: {'Content-Type': 'application/json'})
+
+        sc = SecretsClient.new(client_options.merge(pod_ip: '127.0.0.1'))
+        sc.write_pki_certs
+
+        assert_requested stub_req
+      end
+
+      it 'processes ip_sans csv input and includes pod ip address in cert issue request' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/issue/example-com?common_name=example.com&pod_ip_as_san=true&ip_sans=10.10.10.10,12.12.12.12"
+        TEXT
+
+        stub_req = stub_request(:put, url).
+          with { |request| request.body == {common_name: 'example.com', ip_sans: '127.0.0.1,10.10.10.10,12.12.12.12'}.to_json }.
+          to_return(body: reply, headers: {'Content-Type': 'application/json'})
+
+        sc = SecretsClient.new(client_options.merge(pod_ip: '127.0.0.1'))
+        sc.write_pki_certs
+
+        assert_requested stub_req
+      end
+
+      it 'processes ip_sans array and includes pod ip address in cert issue request' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/issue/example-com?common_name=example.com&pod_ip_as_san=true&ip_sans=10.10.10.10&ip_sans=12.12.12.12"
+        TEXT
+
+        stub_req = stub_request(:put, url).
+          with { |request| request.body == {common_name: 'example.com', ip_sans: '127.0.0.1,10.10.10.10,12.12.12.12'}.to_json }.
+          to_return(body: reply, headers: {'Content-Type': 'application/json'})
+
+        sc = SecretsClient.new(client_options.merge(pod_ip: '127.0.0.1'))
+        sc.write_pki_certs
+
+        assert_requested stub_req
+      end
+
+      it 'skips including pod IP in cert request' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/issue/example-com?common_name=example.com&pod_ip_as_san=true
+        TEXT
+
+        stub_req = stub_request(:put, url).
+          with { |request| request.body == {common_name: 'example.com', ip_sans: '127.0.0.1'}.to_json }.
+          to_return(body: reply, headers: {'Content-Type': 'application/json'})
+
+        sc = SecretsClient.new(client_options.merge(pod_ip: '127.0.0.1'))
+        sc.write_pki_certs
+
+        assert_requested stub_req
+      end
+
+      it 'includes pod hostname as common name in cert issue request' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/issue/example-com?pod_hostname_as_cn=true"
+        TEXT
+
+        stub_req = stub_request(:put, url).
+          with { |request| request.body == {common_name: 'test'}.to_json }.
+          to_return(body: reply, headers: {'Content-Type': 'application/json'})
+
+        sc = SecretsClient.new(client_options.merge(pod_hostname: 'test'))
+        sc.write_pki_certs
+
+        assert_requested stub_req
+      end
+
+      it 'overrides pod hostname as common name in cert issue request' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/issue/example-com?common_name=example.com&pod_hostname_as_cn=true"
+        TEXT
+
+        stub_req = stub_request(:put, url).
+          with { |request| request.body == {common_name: 'test'}.to_json }.
+          to_return(body: reply, headers: {'Content-Type': 'application/json'})
+
+        sc = SecretsClient.new(client_options.merge(pod_hostname: 'test'))
+        sc.write_pki_certs
+
+        assert_requested stub_req
+      end
+
+      it 'includes pod hostname as alternate name in cert issue request' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/issue/example-com?common_name=example.com&pod_hostname_as_san=true"
+        TEXT
+
+        stub_req = stub_request(:put, url).
+          with { |request| request.body == {common_name: 'example.com', alt_names: 'test'}.to_json }.
+          to_return(body: reply, headers: {'Content-Type': 'application/json'})
+
+        sc = SecretsClient.new(client_options.merge(pod_hostname: 'test'))
+        sc.write_pki_certs
+
+        assert_requested stub_req
+      end
+
+      it 'processes alt names csv input and includes pod hostname as alt name in cert issue request' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/issue/example-com?common_name=example.com&alt_names=foo.bar,cert.me&pod_hostname_as_san=true"
+        TEXT
+
+        stub_req = stub_request(:put, url).
+          with { |request| request.body == {common_name: 'example.com', alt_names: 'test,foo.bar,cert.me'}.to_json }.
+          to_return(body: reply, headers: {'Content-Type': 'application/json'})
+
+        sc = SecretsClient.new(client_options.merge(pod_hostname: 'test'))
+        sc.write_pki_certs
+
+        assert_requested stub_req
+      end
+
+      it 'processes alt names array and includes pod hostname as alt name in cert issue request' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/issue/example-com?common_name=example.com&alt_names=foo.bar&alt_names=cert.me&pod_hostname_as_san=true"
+        TEXT
+
+        stub_req = stub_request(:put, url).
+          with { |request| request.body == {common_name: 'example.com', alt_names: 'test,foo.bar,cert.me'}.to_json }.
+          to_return(body: reply, headers: {'Content-Type': 'application/json'})
+
+        sc = SecretsClient.new(client_options.merge(pod_hostname: 'test'))
+        sc.write_pki_certs
+
+        assert_requested stub_req
+      end
+
+      it 'is another test' do
+        File.write('annotations', <<~TEXT)
+          secret/SECRET="this/is/very/hidden"
+          pki/example.com="pki/issue/example-com?common_name=example.com&alt_names=foo.bar&pod_hostname_as_san=true"
+        TEXT
+
+        stub_req = stub_request(:put, url).
+          with { |request| request.body == {common_name: 'example.com', alt_names: 'test,foo.bar'}.to_json }.
+          to_return(body: reply, headers: {'Content-Type': 'application/json'})
+
+        sc = SecretsClient.new(client_options.merge(pod_hostname: 'test'))
+        sc.write_pki_certs
+
+        assert_requested stub_req
       end
     end
   end

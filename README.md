@@ -21,6 +21,8 @@ VAULT_PREFIX: optional, which prefix to use, defaults to "apps"
 SIDECAR_SECRET_PATH: optional, where to store the secrets on disk, defaults to  '/secrets'
 SECRET_ANNOTATIONS: optional, where to read annotations from, defaults to '/secretkeys/annotations'
 SERVICEACCOUNT_DIR: optional, where to service account from, defaults to '/var/run/secrets/kubernetes.io/serviceaccount/'
+POD_IP: optional, the IP address assigned to the Kubernetes pod
+POD_HOSTNAME: optional, the hostname assigned to the Kubernetes pod
 ```
 
 **(secrets in repo work only for testing)**.
@@ -28,12 +30,12 @@ SERVICEACCOUNT_DIR: optional, where to service account from, defaults to '/var/r
 Example config:
  - [kubernetes/vault-auth-secret.yml](kubernetes/vault-auth-secret.yml)
  - [kubernetes/vault-auth-token.yml](kubernetes/vault-auth-token.yml)
- 
+
 #### Supported Authentication Types
 ##### `VAULT_AUTH_TYPE=token` (default)
 
 The file path specified in `VAULT_AUTH_FILE` will be read and used as a Vault token directly.
-The token is validated using Vault's [lookup-self API](https://www.vaultproject.io/api/auth/token/index.html#lookup-a-token-self-). 
+The token is validated using Vault's [lookup-self API](https://www.vaultproject.io/api/auth/token/index.html#lookup-a-token-self-).
 
 ##### `VAULT_AUTH_TYPE=cert`
 
@@ -45,7 +47,7 @@ If the backend is mounted at a different path from `/auth/cert`, it can be custo
 
 ##### `VAULT_AUTH_TYPE=kubernetes`
 
-The Kubernetes ServiceAccount mounted into the init container will be used to  
+The Kubernetes ServiceAccount mounted into the init container will be used to
 authenticate with vault using the [Kubernetes Auth backend](https://www.vaultproject.io/api/auth/kubernetes/index.html).
 The role against which login will be attempted is set via `VAULT_AUTH_ROLE`.
 
@@ -95,6 +97,12 @@ ${SIDECAR_SECRET_PATH}/pki/example.com/serial_number
 ${SIDECAR_SECRET_PATH}/pki/example.com/private_key_type
 ${SIDECAR_SECRET_PATH}/pki/example.com/expiration
 ```
+
+**Special Annotation Parameters:**
+
+- `?pod_hostname_as_cn=true`: Pod hostname is set to the common name, overriding the `common_name` parameter if provided
+- `?pod_hostname_as_san=true`: Pod hostname is included as a subject alternate name
+- `?pod_ip_as_san=true`: Pod IP is included as a subject alternate name
 
 ### Debugging
 
