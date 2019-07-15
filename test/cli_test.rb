@@ -53,7 +53,8 @@ describe "CLI" do
         SIDECAR_SECRET_PATH: Dir.pwd,
         SERVICEACCOUNT_DIR: Dir.pwd,
         SECRET_ANNOTATIONS: 'input',
-        KUBERNETES_PORT_443_TCP_ADDR: "localhost:#{port}"
+        KUBERNETES_PORT_443_TCP_ADDR: "localhost:#{port}",
+        POD_HOSTNAME: 'example.com'
       ) do
         sh "#{Bundler.root}/bin/secrets"
         File.read('BAR').must_equal('foo') # secret was written out
@@ -71,7 +72,8 @@ describe "CLI" do
         SIDECAR_SECRET_PATH: Dir.pwd,
         SERVICEACCOUNT_DIR: Dir.pwd,
         SECRET_ANNOTATIONS: 'input',
-        KUBERNETES_PORT_443_TCP_ADDR: "localhost:#{port}"
+        KUBERNETES_PORT_443_TCP_ADDR: "localhost:#{port}",
+        POD_HOSTNAME: 'example.com'
       ) do
         sh "#{Bundler.root}/bin/secrets"
         File.read('BAR').must_equal('foo') # secret was written out

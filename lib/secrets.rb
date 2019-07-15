@@ -3,6 +3,7 @@
 require 'vault'
 require 'openssl'
 require 'fileutils'
+require 'socket'
 
 # fixed in vault server 0.6.2 https://github.com/hashicorp/vault/pull/1795
 Vault::Client.prepend(Module.new do
@@ -21,7 +22,8 @@ class SecretsClient
   def initialize(
     vault_address:, vault_mount:, vault_prefix:, vault_v2:,
     ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:, logger:,
-    vault_auth_type: 'token', vault_auth_path: nil, vault_auth_role: nil, vault_authfile_path: nil
+    vault_auth_type: 'token', vault_auth_path: nil, vault_auth_role: nil, vault_authfile_path: nil,
+    pod_ip: nil, pod_hostname: nil
   )
     raise ArgumentError, "vault address not found" if vault_address.nil?
     raise ArgumentError, "annotations file not found" unless File.exist?(annotations.to_s)
@@ -35,6 +37,8 @@ class SecretsClient
     @api_url = api_url
     @ssl_verify = ssl_verify
     @vault_v2 = vault_v2
+    @pod_ip = find_pod_ip_v4 pod_ip
+    @pod_hostname = pod_hostname || Socket.gethostbyname(Socket.gethostname).first
     @logger = logger
 
     @vault = Vault::Client.new(
@@ -100,6 +104,27 @@ class SecretsClient
     pkis = @pki_keys.map do |name, path|
       begin
         uri_path, data = split_url(path)
+
+        # transform the data (request parameter) values:
+        #  The VAULT API does not accept arrays
+        #  1) empty arrays are dropped
+        #  2) arrays are striped of empty entries and joined into a comma separated string
+        data.delete_if { |_key, value| value.empty? }.
+          transform_values! { |value| value.delete_if(&:empty?).join(',') }
+
+        # translate 'reserved' parameters into real parameters in `data`
+        if data.delete('pod_ip_as_san')&.downcase == 'true'
+          data['ip_sans'] = [@pod_ip, *data['ip_sans']].join(',')
+        end
+
+        if data.delete('pod_hostname_as_cn')&.downcase == 'true'
+          data['common_name'] = @pod_hostname
+        end
+
+        if data.delete('pod_hostname_as_san')&.downcase == 'true'
+          data['alt_names'] = [@pod_hostname, *data['alt_names']].join(',')
+        end
+
         [name, write_to_vault(uri_path, data)]
       rescue StandardError
         errors << $!
@@ -118,8 +143,8 @@ class SecretsClient
       File.write("#{cert_dir}/private_key.pem", data[:private_key])
       File.write("#{cert_dir}/private_key_type", data[:private_key_type])
       File.write("#{cert_dir}/serial_number", data[:serial_number])
-      if data[:chain_ca]
-        File.write("#{cert_dir}/chain_ca.pem", data[:chain_ca].join("\n"))
+      if data[:ca_chain]
+        File.write("#{cert_dir}/ca_chain.pem", data[:ca_chain].join("\n"))
       end
     end
     @logger.info(message: "PKI certificates written")
@@ -240,16 +265,17 @@ class SecretsClient
   #     URL contains no query paramets an empty hash is returned
   #
   # "pki/issue/cert?common_name=foo&ip_sans=127.0.0.1" ->
-  #   [ "pki/issue/cert", { "common_name":"foo", "ip_sans":"127.0.0.1" } ]
+  #   [ "pki/issue/cert", { "common_name":["foo"], "ip_sans":["127.0.0.1"] } ]
   def split_url(path)
     uri = URI.parse(path)
-    if uri.query.nil?
-      [uri.path, {}]
-    else
-      payload = CGI.parse(uri.query).map do |key, value|
-        [key, value.length > 1 ? value : value[0]]
-      end.to_h
-      [uri.path, payload]
-    end
+    [uri.path, uri.query.nil? ? {} : CGI.parse(uri.query)]
+  end
+
+  # returns IPV4 dotted string
+  def find_pod_ip_v4(pod_ip)
+    pod_ip || Socket.ip_address_list.
+      select { |addr| addr.ipv4? && !addr.ipv4_loopback? }.
+      first.
+      ip_address
   end
 end
