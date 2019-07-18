@@ -116,6 +116,7 @@ Since the init-container always shuts down, debug by using a dedicated Pod, see 
 
 Merge PR then `docker pull zendesk/samson_secret_puller` to get latest digest.
 (for branches, `rake build` and then tag+push them manually)
+For zendesk: image is pushed to GCR, use the sha from the latest build.
 
 ## Ruby Gem
 
