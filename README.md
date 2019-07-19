@@ -106,7 +106,8 @@ ${SIDECAR_SECRET_PATH}/pki/example.com/expiration
 
 ### Debugging
 
-Since the init-container always shuts down, debug by using a dedicated Pod, see [kubernetes/debug.yml]
+ - Use a dedicated Pod to debug inside the cluster, see [kubernetes/debug.yml]
+ - There is no `bash`, use `sh`
 
 ### Test
 
