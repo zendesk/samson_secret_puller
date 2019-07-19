@@ -150,7 +150,6 @@ describe SecretsClient do
       logger.expects(:info).with(message: "Authenticated with Vault Server", policies: nil, metadata: nil)
       logger.expects(:info).with(message: "secrets found", keys: [["SECRET", "this/is/very/hidden"]])
       logger.expects(:info).with(message: "PKI found", keys: []) # ["example.com", "pki/issue/example-com?common_name=example.com"]])
-      logger.expects(:info).with(message: "secrets written")
       process_secrets
     end
 
