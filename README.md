@@ -108,6 +108,7 @@ ${SIDECAR_SECRET_PATH}/pki/example.com/expiration
 
  - Use a dedicated Pod to debug inside the cluster, see [kubernetes/debug.yml]
  - There is no `bash`, use `sh`
+ - (GCR) See which commit the image has `docker inspect --format '{{ index .Config.Labels "revision"}}' <image-name>`
 
 ### Test
 
