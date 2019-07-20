@@ -96,7 +96,6 @@ class SecretsClient
 
     # notify primary container that it is now safe to read all secrets
     File.write("#{@output_path}/.done", Time.now.to_s)
-    @logger.info(message: "secrets written")
   end
 
   def write_pki_certs

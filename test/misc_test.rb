@@ -6,7 +6,7 @@ SingleCov.not_covered!
 
 describe "misc" do
   it "documents all env vars" do
-    env = /[A-Z_\d]{5,}/
+    env = /[A-Z_\d]{6,}/
     supported = File.read("bin/secrets").scan(env) - ["STDOUT", "KUBERNETES_PORT_443_TCP_ADDR", "TESTING", "SIGTERM"]
     documented = File.read("README.md").scan(env) - ["README"]
     (documented - supported).must_equal []
