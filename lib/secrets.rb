@@ -38,7 +38,7 @@ class SecretsClient
     @ssl_verify = ssl_verify
     @vault_v2 = vault_v2
     @pod_ip = find_pod_ip_v4 pod_ip
-    @pod_hostname = pod_hostname || Socket.gethostbyname(Socket.gethostname).first
+    @pod_hostname = pod_hostname || Socket.gethostname
     @logger = logger
 
     @vault = Vault::Client.new(
