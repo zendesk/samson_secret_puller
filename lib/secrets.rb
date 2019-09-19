@@ -99,6 +99,8 @@ class SecretsClient
   end
 
   def write_pki_certs
+    return if @pki_keys.empty? # silence / do less work
+
     errors = []
     pkis = @pki_keys.map do |name, path|
       begin

@@ -333,6 +333,13 @@ describe SecretsClient do
       File.read("pki/test.com/expiration").must_equal(expiration)
     end
 
+    it 'does nothing without keys' do
+      File.write('annotations', <<~TEXT)
+        secret/SECRET="this/is/very/hidden"
+      TEXT
+      process_pki_certs
+    end
+
     context 'exercise #split_url' do
       before do
         stub_request(:put, +'https://foo.bar:8200/v1/pki/issue/request-empty').
