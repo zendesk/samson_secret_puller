@@ -23,12 +23,13 @@ class SecretsClient
     vault_address:, vault_mount:, vault_prefix:, vault_v2:,
     ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:, logger:,
     vault_auth_type: 'token', vault_auth_path: nil, vault_auth_role: nil, vault_authfile_path: nil,
-    pod_ip: nil, pod_hostname: nil
+    pod_ip: nil, pod_hostname: nil, group_resolve_order: [], group_secret_annotations: false
   )
     raise ArgumentError, "vault address not found" if vault_address.nil?
     raise ArgumentError, "annotations file not found" unless File.exist?(annotations.to_s)
     raise ArgumentError, "serviceaccount dir #{serviceaccount_dir} not found" unless Dir.exist?(serviceaccount_dir.to_s)
     raise ArgumentError, "api_url is null" if api_url.nil?
+    raise ArgumentError, "secretkeys resolve order not found" if group_secret_annotations && group_resolve_order.empty?
 
     @vault_mount = vault_mount
     @vault_prefix = vault_prefix
@@ -60,8 +61,34 @@ class SecretsClient
     end
 
     annotation_lines = File.read(annotations).split("\n")
+    if group_secret_annotations
+      key_hash = {}
+      # Fetches grouped secrets key and map with secrets keys
+      # eg: secrets/pod999: | foo=bar\\ncat=cow \n secrets/pod998: | foo=bar
+      # Output: {pod999: {foo: bar, cat: cow}, pod998: {foo: bar}}
+      grouped_keys = from_annotations(annotation_lines, /^secrets\//).each_with_object({}) do |keypath, obj|
+        normalized_group = keypath[1].split("\\n").each_with_object({}) do |line, obj|
+          key, path = line.split("=", 2)
+          if key && path
+            path.delete!('"')
+            obj[key] = [key, path]
+          end
+        end
+        obj[keypath[0]] = normalized_group
+      end
 
-    @secret_keys = from_annotations(annotation_lines, /^secret\//)
+      # Order the secret key from given group order
+      # eg: {"pod999": [["foo", "bar"]], "staging": [["foo", "ping"], ["cat", "cow"]]}
+      # Output: [["foo", "bar"], ["cat", "cow"]]
+      group_resolve_order.each do |group|
+        grouped_keys[group] && grouped_keys[group].each do |k, v|
+          key_hash[k] = v unless key_hash[k]
+        end
+      end
+      @secret_keys = key_hash.values
+    else
+      @secret_keys = from_annotations(annotation_lines, /^secret\//)
+    end
     raise ArgumentError, "#{annotations} contains no secrets" if @secret_keys.empty?
     @logger.info(message: "secrets found", keys: @secret_keys)
 
