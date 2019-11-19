@@ -27,7 +27,7 @@ class SecretsClient
   )
     raise ArgumentError, "vault address not found" if vault_address.nil?
     raise ArgumentError, "annotations file not found" unless File.exist?(annotations.to_s)
-    raise ArgumentError, "serviceaccount dir #{serviceaccount_dir} not found" unless Dir.exist?(serviceaccount_dir.to_s)
+    raise ArgumentError, "serviceaccount dir #{serviceaccount_dir} not found" if !Dir.exist?(serviceaccount_dir.to_s) && vault_auth_type == "kubernetes"
     raise ArgumentError, "api_url is null" if api_url.nil?
 
     @vault_mount = vault_mount

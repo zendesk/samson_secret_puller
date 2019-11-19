@@ -39,7 +39,7 @@ describe SecretsClient do
       vault_mount: 'secret',
       ssl_verify: false,
       annotations: 'annotations',
-      serviceaccount_dir: Dir.pwd,
+      serviceaccount_dir: 'foo',
       output_path: Dir.pwd,
       api_url: 'https://foo.bar',
       vault_v2: false,
@@ -51,6 +51,7 @@ describe SecretsClient do
   let(:token_client) { SecretsClient.new(client_options) }
   let(:serviceaccount_client) do
     client_options[:vault_auth_type] = "kubernetes"
+    client_options[:serviceaccount_dir] = Dir.pwd
     SecretsClient.new(client_options)
   end
   let(:client) do
@@ -128,7 +129,7 @@ describe SecretsClient do
     end
 
     it "fails to initialize when serviceaccount_dir is missing" do
-      assert_raises(ArgumentError) { SecretsClient.new(client_options.merge(serviceaccount_dir: "foo")) }
+      assert_raises(ArgumentError) { SecretsClient.new(client_options.merge(serviceaccount_dir: "foo", vault_auth_type: "kubernetes")) }
     end
   end
 
