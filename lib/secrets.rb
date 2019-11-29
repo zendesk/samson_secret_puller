@@ -21,12 +21,18 @@ class SecretsClient
   # auth against the server, set a token in the Vault obj
   def initialize(
     vault_address:, vault_mount:, vault_prefix:, vault_v2:,
-    ssl_verify:, annotations:, serviceaccount_dir:, output_path:, api_url:, logger:,
-    vault_auth_type: 'token', vault_auth_path: nil, vault_auth_role: nil, vault_authfile_path: nil,
-    pod_ip: nil, pod_hostname: nil
+    ssl_verify:, annotations:, env_secrets_prefix:, env_pki_prefix:, serviceaccount_dir:, output_path:,
+    api_url:, logger:, vault_auth_type: 'token', vault_auth_path: nil, vault_auth_role: nil,
+    vault_authfile_path: nil, pod_ip: nil, pod_hostname: nil
   )
     raise ArgumentError, "vault address not found" if vault_address.nil?
-    raise ArgumentError, "annotations file not found" unless File.exist?(annotations.to_s)
+    if File.exist?(annotations.to_s) && (!env_secrets_prefix.nil? || !env_pki_prefix.nil?)
+      raise ArgumentError, "can't specify both annotations file and env/pki prefixs"
+    elsif !File.exist?(annotations.to_s) && (env_secrets_prefix.nil? || env_pki_prefix.nil?)
+      raise ArgumentError, "must specify either annotations file or env/pki prefixs"
+    elsif !File.exist?(annotations.to_s) && (env_secrets_prefix.nil? || env_pki_prefix.nil?)
+      raise ArgumentError, 'annotations file not found'
+    end
     raise ArgumentError, "serviceaccount dir #{serviceaccount_dir} not found" if !Dir.exist?(serviceaccount_dir.to_s) && vault_auth_type == "kubernetes"
     raise ArgumentError, "api_url is null" if api_url.nil?
 
@@ -59,13 +65,20 @@ class SecretsClient
       )
     end
 
-    annotation_lines = File.read(annotations).split("\n")
-
-    @secret_keys = from_annotations(annotation_lines, /^secret\//)
+    @secret_keys = if File.exist?(annotations.to_s)
+      annotation_lines = File.read(annotations).split("\n")
+      from_annotations(annotation_lines, /^secret\//)
+    else
+      from_env(/^#{env_secrets_prefix}/)
+    end
     raise ArgumentError, "#{annotations} contains no secrets" if @secret_keys.empty?
     @logger.info(message: "secrets found", keys: @secret_keys)
 
-    @pki_keys = from_annotations(annotation_lines, /^pki\//)
+    @pki_keys = if File.exist?(annotations.to_s)
+      from_annotations(annotation_lines, /^pki\//)
+    else
+      from_env(/^#{env_pki_prefix}/)
+    end
     @logger.info(message: "PKI found", keys: @pki_keys)
   end
 
@@ -216,6 +229,13 @@ class SecretsClient
     else
       "#{@vault_mount}/#{@vault_prefix}/#{key}"
     end
+  end
+
+  def from_env(re_prefix)
+    ENV.map do |key, path|
+      next unless key =~ re_prefix
+      [key.sub(re_prefix, ""), path]
+    end.compact
   end
 
   # {re_prefix}/FOO="a/b/c/z" => {"FOO" => "a/b/c/z"}
