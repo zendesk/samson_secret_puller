@@ -65,8 +65,14 @@ module SamsonSecretPuller
 
     def read_secrets
       return {} unless File.exist?(FOLDER)
-      Dir.glob("#{FOLDER}/*").each_with_object({}) do |file, all|
+      scan_folder.each_with_object({}) do |file, all|
         all[File.basename(file)] = File.read(file).strip
+      end
+    end
+
+    def scan_folder
+      Dir.glob("#{FOLDER}/*").reject do |path|
+        File.directory?(path)
       end
     end
   end

@@ -52,6 +52,7 @@ describe SamsonSecretPuller do
   before do
     # basic healthy status
     Dir.mkdir('secrets')
+    Dir.mkdir('secrets/dir')
     File.write('secrets/FOO', 'bar')
     File.write('secrets/.done', 'd')
 
@@ -59,6 +60,10 @@ describe SamsonSecretPuller do
     if SamsonSecretPuller.instance_variable_defined?(:@secrets)
       SamsonSecretPuller.remove_instance_variable(:@secrets)
     end
+  end
+
+  it "ignores directories" do
+    SamsonSecretPuller['dir'].must_be_nil
   end
 
   it "reads secrets" do
