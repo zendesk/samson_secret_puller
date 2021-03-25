@@ -63,10 +63,10 @@ class SecretsClient
 
     @secret_keys = from_annotations(annotation_lines, /^secret\//)
     raise ArgumentError, "#{annotations} contains no secrets" if @secret_keys.empty?
-    @logger.info(message: "secrets found", keys: @secret_keys)
+    @logger.debug(message: "secrets found", keys: @secret_keys)
 
     @pki_keys = from_annotations(annotation_lines, /^pki\//)
-    @logger.info(message: "PKI found", keys: @pki_keys)
+    @logger.debug(message: "PKI found", keys: @pki_keys)
   end
 
   def write_secrets
@@ -148,7 +148,7 @@ class SecretsClient
         File.write("#{cert_dir}/ca_chain.pem", data[:ca_chain].join("\n"))
       end
     end
-    @logger.info(message: "PKI certificates written")
+    @logger.debug(message: "PKI certificates written")
   end
 
   private
@@ -257,7 +257,7 @@ class SecretsClient
       client.token = secret.auth.client_token
     end
 
-    @logger.info(message: "Authenticated with Vault Server", policies: auth_data.policies, metadata: auth_data.metadata)
+    @logger.debug(message: "Authenticated with Vault Server", policies: auth_data.policies, metadata: auth_data.metadata)
   end
 
   # splits the given url; returning
