@@ -64,7 +64,7 @@ describe SecretsClient do
   let(:status_api_body) { {items: [{status: {hostIP: "10.10.10.10"}}]}.to_json }
 
   before do
-    logger.stubs(:info)
+    logger.stubs(:debug)
     stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").
       to_return(response_body(auth_reply))
     stub_request(:get, "https://foo.bar:8200/v1/auth/token/lookup-self").
@@ -147,10 +147,10 @@ describe SecretsClient do
     end
 
     it 'logs' do
-      logger.unstub(:info)
-      logger.expects(:info).with(message: "Authenticated with Vault Server", policies: nil, metadata: nil)
-      logger.expects(:info).with(message: "secrets found", keys: [["SECRET", "this/is/very/hidden"]])
-      logger.expects(:info).with(message: "PKI found", keys: []) # ["example.com", "pki/issue/example-com?common_name=example.com"]])
+      logger.unstub(:debug)
+      logger.expects(:debug).with(message: "Authenticated with Vault Server", policies: nil, metadata: nil)
+      logger.expects(:debug).with(message: "secrets found", keys: [["SECRET", "this/is/very/hidden"]])
+      logger.expects(:debug).with(message: "PKI found", keys: []) # ["example.com", "pki/issue/example-com?common_name=example.com"]])
       process_secrets
     end
 
