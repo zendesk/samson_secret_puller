@@ -23,6 +23,7 @@ SECRET_ANNOTATIONS: optional, where to read annotations from, defaults to '/secr
 SERVICEACCOUNT_DIR: optional, where to service account from, defaults to '/var/run/secrets/kubernetes.io/serviceaccount/'
 POD_IP: optional, the IP address assigned to the Kubernetes pod
 POD_HOSTNAME: optional, the hostname assigned to the Kubernetes pod
+LOG_LEVEL: optional, log level, defaults to "info"; set to "debug" when debugging
 ```
 
 **(secrets in repo work only for testing)**.
@@ -109,6 +110,7 @@ ${SIDECAR_SECRET_PATH}/pki/example.com/expiration
  - Use a dedicated Pod to debug inside the cluster, see [kubernetes/debug.yml]
  - There is no `bash`, use `sh`
  - (GCR) See which commit the image has `docker inspect --format '{{ index .Config.Labels "revision"}}' <image-name>`
+ - set `LOG_LEVEL=debug` env var for debug logs
 
 ### Test
 
