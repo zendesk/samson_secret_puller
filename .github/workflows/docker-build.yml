@@ -1,0 +1,22 @@
+name: docker-build
+on: [push]
+
+jobs:
+  build_image:
+    strategy:
+      matrix:
+        ARCH: ["amd64", "arm64"]
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: zendesk/checkout@v2
+      - uses: zendesk/ga/docker-build-multiarch@v2
+        with:
+          architecture: ${{ matrix.ARCH }}
+  create_image_manifest:
+    name: "create image manifest"
+    runs-on: [self-hosted, zendesk-stable]
+    needs: build_image
+    steps:
+      - uses: zendesk/ga/docker-create-manifest@v2
+        with:
+          tag-default-branch-latest: true
