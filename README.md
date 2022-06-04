@@ -29,10 +29,12 @@ LOG_LEVEL: optional, log level, defaults to "info"; set to "debug" when debuggin
 **(secrets in repo work only for testing)**.
 
 Example config:
- - [kubernetes/vault-auth-secret.yml](kubernetes/vault-auth-secret.yml)
- - [kubernetes/vault-auth-token.yml](kubernetes/vault-auth-token.yml)
+
+- [kubernetes/vault-auth-secret.yml](kubernetes/vault-auth-secret.yml)
+- [kubernetes/vault-auth-token.yml](kubernetes/vault-auth-token.yml)
 
 #### Supported Authentication Types
+
 ##### `VAULT_AUTH_TYPE=token` (default)
 
 The file path specified in `VAULT_AUTH_FILE` will be read and used as a Vault token directly.
@@ -44,7 +46,6 @@ The file path specified in `VAULT_AUTH_FILE` will be read and used as an X509 Ce
 to authenticate with vault using the [TLS Certificate Auth backend](https://www.vaultproject.io/api/auth/cert/index.html).
 
 If the backend is mounted at a different path from `/auth/cert`, it can be customised using the `VAULT_AUTH_PATH` env var.
-
 
 ##### `VAULT_AUTH_TYPE=kubernetes`
 
@@ -107,20 +108,19 @@ ${SIDECAR_SECRET_PATH}/pki/example.com/expiration
 
 ### Debugging
 
- - Use a dedicated Pod to debug inside the cluster, see [kubernetes/debug.yml]
- - There is no `bash`, use `sh`
- - (GCR) See which commit the image has `docker inspect --format '{{ index .Config.Labels "revision"}}' <image-name>`
- - set `LOG_LEVEL=debug` env var for debug logs
+- Use a dedicated Pod to debug inside the cluster, see [kubernetes/debug.yml]
+- There is no `bash`, use `sh`
+- Set `LOG_LEVEL=debug` env var for debug logs
 
 ### Test
 
 `bundle && bundle exec rake`
 
-### Release to [docker hub](https://hub.docker.com/r/zendesk/samson_secret_puller/)
+### Release to [Docker Hub](https://hub.docker.com/r/zendesk/samson_secret_puller/)
 
-Merge PR then `docker pull zendesk/samson_secret_puller` to get latest digest.
-(for branches, `rake build` and then tag+push them manually)
-For zendesk: image is pushed to GCR, use the sha from the latest build.
+- `docker pull zendesk/samson_secret_puller` gets the latest digest after merging a PR
+- For branches, use `rake build` and then tag + push them manually
+- For zendesk: [zendesk_samson_secret_puller](https://github.com/zendesk/zendesk_samson_secret_puller) pulls the latest and pushes a multi-arch image to GCR
 
 ## Ruby Gem
 
