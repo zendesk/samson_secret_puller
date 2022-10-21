@@ -259,7 +259,6 @@ describe SecretsClient do
     end
     let(:serial_number) { "63:84:EE:63:75:65:CD:C6:BD:09:AE:A3:EB:AC:E4:50:FA:3E:D4:95" }
     let(:expiration) { "1559186544" }
-
     let(:reply) do
       {
         data: {
@@ -593,6 +592,46 @@ describe SecretsClient do
 
         assert_requested stub_req
       end
+    end
+  end
+
+  describe '#read_from_vault' do
+    def stub_read
+      stub_request(:get, "https://foo.bar:8200/v1/secret/apps/foo")
+    end
+
+    let(:valid) { {body: {data: {vault: "bar"}}.to_json, headers: {'Content-Type': 'application/json'}} }
+
+    before { client.stubs(:sleep).with { false } }
+
+    it 'reads' do
+      request = stub_read.to_return(valid)
+      client.send(:read_from_vault, 'foo').must_equal "bar"
+      assert_requested request, times: 1
+    end
+
+    it 'retries on 429' do
+      client.expects(:sleep).times(1)
+      request = stub_read.to_return({status: 429}, valid)
+      client.send(:read_from_vault, 'foo').must_equal "bar"
+      assert_requested request, times: 2
+    end
+
+    it 'does not retry on regular errors' do
+      request = stub_read.to_return(status: 500)
+      assert_raises Vault::HTTPServerError do
+        client.send(:read_from_vault, 'foo')
+      end.message.must_match /\AThe Vault server at/
+      assert_requested request, times: 1
+    end
+
+    it 'does not retry forever' do
+      client.expects(:sleep).times(4)
+      request = stub_read.to_return(status: 429)
+      assert_raises Vault::HTTPClientError do
+        client.send(:read_from_vault, 'foo')
+      end.message.must_match /\AError reading key foo\n/
+      assert_requested request, times: 5
     end
   end
 end

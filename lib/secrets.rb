@@ -169,13 +169,10 @@ class SecretsClient
 
   def read_from_vault(key)
     key = normalize_key(key)
-    begin
-      result = @vault.with_retries(Vault::HTTPConnectionError, attempts: 3) do
+    result = retry_on_429 "reading key #{key}" do
+      @vault.with_retries(Vault::HTTPConnectionError, attempts: 3) do
         @vault.logical.read(vault_key_path(key))
       end
-    rescue Vault::HTTPClientError
-      $!.message.prepend "Error reading key #{key}\n"
-      raise
     end
 
     if !result.respond_to?(:data) || !result.data || !result.data.is_a?(Hash)
@@ -186,13 +183,10 @@ class SecretsClient
   end
 
   def write_to_vault(path, data)
-    begin
-      result = @vault.with_retries(Vault::HTTPConnectionError, Vault::PersistentHTTP::Error, attempts: 3) do
+    result = retry_on_429 "writing to #{path}" do
+      @vault.with_retries(Vault::HTTPConnectionError, Vault::PersistentHTTP::Error, attempts: 3) do
         @vault.logical.write(path, data)
       end
-    rescue Vault::HTTPClientError
-      $!.message.prepend "Error writing to #{path}\n"
-      raise
     end
 
     if !result.respond_to?(:data) || !result.data.is_a?(Hash)
@@ -200,6 +194,18 @@ class SecretsClient
     end
 
     result.data
+  end
+
+  def retry_on_429(prefix)
+    retries ||= 0
+    yield
+  rescue Vault::HTTPClientError => e
+    if (retries += 1) < 5 && e.code == 429
+      sleep 0.5 * retries
+      retry
+    end
+    e.message.prepend "Error #{prefix}\n"
+    raise e
   end
 
   # keys could include slashes in last part, which we would then be unable to resolve
