@@ -8,8 +8,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - run: docker build -t secret_tester .
-    - run: docker build -f Dockerfile.dev .
-    - run: docker run -it --rm secret_tester bundle exec rake test
-    - run: docker run -it --rm secret_tester bundle exec rake rubocop
+    - uses: zendesk/checkout@v2
+    - run: docker build .
+    - run: docker build -t secret_tester -f Dockerfile.dev .
+    - run: docker run --rm secret_tester bundle exec rake test
+    - run: docker run --rm secret_tester bundle exec rake rubocop
