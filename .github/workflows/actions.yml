@@ -1,0 +1,15 @@
+name: CI
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: docker build -t secret_tester .
+    - run: docker build -f Dockerfile.dev .
+    - run: docker run -it --rm secret_tester bundle exec rake test
+    - run: docker run -it --rm secret_tester bundle exec rake rubocop
