@@ -9,11 +9,11 @@ describe "misc" do
     env = /[A-Z_\d]{6,}/
     supported = File.read("bin/secrets").scan(env) - ["STDOUT", "KUBERNETES_PORT_443_TCP_ADDR", "TESTING", "SIGTERM"]
     documented = File.read("README.md").scan(env) - ["README"]
-    (documented - supported).must_equal []
-    (supported - documented).must_equal []
+    assert_equal [], (documented - supported)
+    assert_equal [], (supported - documented)
   end
 
   it "uses the same version in all dockerfiles" do
-    File.read("Dockerfile")[/FROM .*/].must_equal File.read("Dockerfile.dev")[/FROM .*/]
+    assert_equal File.read("Dockerfile.dev")[/FROM .*/], File.read("Dockerfile")[/FROM .*/]
   end
 end

@@ -63,45 +63,45 @@ describe SamsonSecretPuller do
   end
 
   it "ignores directories" do
-    SamsonSecretPuller['dir'].must_be_nil
+    assert_nil SamsonSecretPuller['dir']
   end
 
   it "reads secrets" do
-    SamsonSecretPuller['FOO'].must_equal 'bar'
+    assert_equal 'bar', SamsonSecretPuller['FOO']
   end
 
   it "fails to read missing secrets" do
-    SamsonSecretPuller['FOO2'].must_be_nil
+    assert_nil SamsonSecretPuller['FOO2']
   end
 
   it "reads when folder is missing" do
     FileUtils.rm_rf("secrets")
-    SamsonSecretPuller['FOO'].must_be_nil
+    assert_nil SamsonSecretPuller['FOO']
   end
 
   it "ignores . files" do
     File.write('secrets/.done', 'bar')
-    SamsonSecretPuller['.done'].must_be_nil
+    assert_nil SamsonSecretPuller['.done']
   end
 
   it "falls back to ENV" do
     with_env(BAR: 'foo') do
-      SamsonSecretPuller['BAR'].must_equal 'foo'
+      assert_equal 'foo', SamsonSecretPuller['BAR']
     end
   end
 
   it "ignores .done" do
-    SamsonSecretPuller['.done'].must_be_nil
+    assert_nil SamsonSecretPuller['.done']
   end
 
   it "overrides ENV values" do
     File.write('secrets/HOME', 'bar')
-    SamsonSecretPuller['HOME'].must_equal 'bar'
+    assert_equal 'bar', SamsonSecretPuller['HOME']
   end
 
   describe '.fetch' do
     it "fetches secrets" do
-      SamsonSecretPuller.fetch('FOO').must_equal 'bar'
+      assert_equal 'bar', SamsonSecretPuller.fetch('FOO')
     end
 
     it "fails to fetches secrets" do
@@ -111,29 +111,29 @@ describe SamsonSecretPuller do
     end
 
     it "can fallback to value" do
-      SamsonSecretPuller.fetch('FOO2', 'bar').must_equal 'bar'
+      assert_equal 'bar', SamsonSecretPuller.fetch('FOO2', 'bar')
     end
 
     it "can fallback to block" do
-      SamsonSecretPuller.fetch('FOO2') { 'bar' }.must_equal 'bar'
+      assert_equal 'bar', SamsonSecretPuller.fetch('FOO2') { 'bar' }
     end
   end
 
   describe '.keys' do
     it "lists secret and env keys" do
-      SamsonSecretPuller.keys.must_include 'FOO'
-      SamsonSecretPuller.keys.must_include 'HOME'
+      assert_includes SamsonSecretPuller.keys, 'FOO'
+      assert_includes SamsonSecretPuller.keys, 'HOME'
     end
   end
 
   describe '.to_h' do
     it "generates a complete hash" do
-      SamsonSecretPuller.to_h["FOO"].must_equal "bar"
+      assert_equal "bar", SamsonSecretPuller.to_h["FOO"]
     end
 
     it "generates a copy" do
       SamsonSecretPuller.to_h["FOO"] = "baz"
-      SamsonSecretPuller.to_h["FOO"].must_equal "bar"
+      assert_equal "bar", SamsonSecretPuller.to_h["FOO"]
     end
   end
 
@@ -143,10 +143,10 @@ describe SamsonSecretPuller do
         old = ENV.to_h
         with_env "BAR" => "baz" do
           SamsonSecretPuller.replace("FOO" => "BAR", "BAR" => "update")
-          SamsonSecretPuller["FOO"].must_equal "BAR"
-          SamsonSecretPuller["BAR"].must_equal "update"
-          ENV["FOO"].must_be_nil
-          ENV["BAR"].must_equal "update"
+          assert_equal "BAR", SamsonSecretPuller["FOO"]
+          assert_equal "update", SamsonSecretPuller["BAR"]
+          assert_nil ENV["FOO"]
+          assert_equal "update", ENV["BAR"]
         end
       ensure
         ENV.replace(old)
@@ -156,50 +156,50 @@ describe SamsonSecretPuller do
 
   describe '.to_a' do
     it "works" do
-      SamsonSecretPuller.to_a.must_include ["FOO", "bar"]
+      assert_includes SamsonSecretPuller.to_a, ["FOO", "bar"]
     end
   end
 
   describe '.to_hash' do
     it "generates a complete hash" do
-      SamsonSecretPuller.to_hash["FOO"].must_equal "bar"
+      assert_equal "bar", SamsonSecretPuller.to_hash["FOO"]
     end
 
     it "generates a copy" do
       SamsonSecretPuller.to_hash["FOO"] = "baz"
-      SamsonSecretPuller.to_hash["FOO"].must_equal "bar"
+      assert_equal "bar", SamsonSecretPuller.to_hash["FOO"]
     end
   end
 
   describe '.dup' do
     it "generates a complete hash" do
-      SamsonSecretPuller.dup["FOO"].must_equal "bar"
+      assert_equal "bar", SamsonSecretPuller.dup["FOO"]
     end
 
     it "generates a copy" do
       new_version = SamsonSecretPuller.dup
       new_version["FOO"] = "baz"
-      SamsonSecretPuller["FOO"].must_equal "bar"
+      assert_equal "bar", SamsonSecretPuller["FOO"]
     end
   end
 
   describe '[]=' do
     it "writes into the environment and secrets" do
       SamsonSecretPuller["BAR"] = 'baz'
-      ENV["BAR"].must_equal 'baz'
-      SamsonSecretPuller["BAR"].must_equal 'baz'
+      assert_equal 'baz', ENV["BAR"]
+      assert_equal 'baz', SamsonSecretPuller["BAR"]
     end
 
     it "deletes when setting nil" do
       SamsonSecretPuller["BAR"] = nil
-      ENV.key?("BAR").must_equal false
-      SamsonSecretPuller.key?("BAR").must_equal false
+      assert_equal false, ENV.key?("BAR")
+      assert_equal false, SamsonSecretPuller.key?("BAR")
     end
 
     it "does not write secrets to disk/process" do
       SamsonSecretPuller["FOO"] = "baz"
-      SamsonSecretPuller["FOO"].must_equal "baz"
-      ENV["FOO"].must_be_nil
+      assert_equal "baz", SamsonSecretPuller["FOO"]
+      assert_nil ENV["FOO"]
     end
   end
 
@@ -207,38 +207,38 @@ describe SamsonSecretPuller do
     it "iterates all" do
       found = []
       SamsonSecretPuller.each { |k, v| found << [k, v] }
-      found.must_include ["FOO", "bar"]
-      found.must_include ["HOME", ENV["HOME"]]
+      assert_includes found, ["FOO", "bar"]
+      assert_includes found, ["HOME", ENV["HOME"]]
     end
   end
 
   describe '.delete' do
     it "deletes secrets and env" do
       ENV['FOO'] = 'bar'
-      SamsonSecretPuller.delete('FOO').must_equal 'bar'
-      SamsonSecretPuller.delete('FOO').must_be_nil
-      ENV['FOO'].must_be_nil
+      assert_equal 'bar', SamsonSecretPuller.delete('FOO')
+      assert_nil SamsonSecretPuller.delete('FOO')
+      assert_nil ENV['FOO']
     end
   end
 
   describe '.each_with_object' do
     it "iterates" do
       result = SamsonSecretPuller.each_with_object([]) { |(k, _), a| a << k }
-      result.must_equal SamsonSecretPuller.keys
+      assert_equal SamsonSecretPuller.keys, result
     end
   end
 
   describe '.values_at' do
     it "works" do
       result = SamsonSecretPuller.values_at('FOO')
-      result.must_equal(['bar'])
+      assert_equal ['bar'], result
     end
   end
 
   describe '.reject / .select' do
     it "works" do
-      SamsonSecretPuller.select { |k, _| k == 'FOO' }.must_equal 'FOO' => 'bar'
-      SamsonSecretPuller.reject { |k, _| k != 'FOO' }.must_equal 'FOO' => 'bar' # rubocop:disable Style/InverseMethods
+      assert_equal({ 'FOO' => 'bar' }, SamsonSecretPuller.select { |k, _| k == 'FOO' })
+      assert_equal({ 'FOO' => 'bar' }, SamsonSecretPuller.reject { |k, _| k != 'FOO' })
     end
   end
 
@@ -246,15 +246,15 @@ describe SamsonSecretPuller do
     it "replaces the ENV" do
       silence_warnings { SamsonSecretPuller.const_set(:Object, Class.new) }
       SamsonSecretPuller.replace_ENV!
-      SamsonSecretPuller::Object::ENV.must_equal SamsonSecretPuller
-      SamsonSecretPuller::Object::ENV["FOO"].must_equal "bar"
+      assert_equal SamsonSecretPuller, SamsonSecretPuller::Object::ENV
+      assert_equal "bar", SamsonSecretPuller::Object::ENV["FOO"]
     end
   end
 
   it "can load without bundler" do
     file = Bundler.root.join('gem/lib/samson_secret_puller')
-    Bundler.with_clean_env do
-      `ruby -r#{file} -e 'puts 1' 2>&1`.must_equal "1\n"
+    Bundler.with_unbundled_env do
+      assert_equal "1\n", `ruby -r#{file} -e 'puts 1' 2>&1`
     end
   end
 end

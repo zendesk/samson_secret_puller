@@ -143,7 +143,7 @@ describe SecretsClient do
 
     it 'works' do
       process_secrets
-      File.read("SECRET").must_equal("foo")
+      assert_equal "foo", File.read("SECRET")
     end
 
     it 'logs' do
@@ -157,7 +157,7 @@ describe SecretsClient do
     it 'ignores newline in key name' do
       File.write('annotations', File.read('annotations') + "\n")
       process_secrets
-      File.read("SECRET").must_equal("foo")
+      assert_equal "foo", File.read("SECRET")
     end
 
     it 'ignores = in path' do
@@ -167,7 +167,7 @@ describe SecretsClient do
 
       process_secrets
 
-      File.read("SECRET").must_equal("foo")
+      assert_equal "foo", File.read("SECRET")
       assert_requested request
     end
 
@@ -185,7 +185,7 @@ describe SecretsClient do
 
       process_secrets
 
-      File.read("SECRET").must_equal("foo")
+      assert_equal "foo", File.read("SECRET")
       assert_requested request
     end
 
@@ -204,15 +204,15 @@ describe SecretsClient do
       stub_request(:post, "https://foo.bar:8200/v1/auth/cert/login").
         to_return(status: 500, body: { errors: ["sample error"]}.to_json)
       e = assert_raises(Vault::HTTPError) { process_secrets }
-      e.message.must_include("sample error")
-      e.message.must_include("The Vault server at `https://foo.bar:8200'")
+      assert_includes e.message, "sample error"
+      assert_includes e.message, "The Vault server at `https://foo.bar:8200'"
     end
 
     it 'raises useful debugging info when reading keys fails' do
       stub_request(:get, url).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
       e = assert_raises(RuntimeError) { process_secrets }
-      e.message.must_include("Error reading key this/is/very/hidden")
-      e.message.must_include("The Vault server at `http://foo.com'")
+      assert_includes e.message, "Error reading key this/is/very/hidden"
+      assert_includes e.message, "The Vault server at `http://foo.com'"
     end
 
     it 'raises useful debugging info when multiple keys fail' do
@@ -221,27 +221,27 @@ describe SecretsClient do
       url2 = url.sub!('very/hidden', 'very/secret') || raise
       stub_request(:get, url2).to_raise(Vault::HTTPClientError.new('http://foo.com', stub(code: 403)))
       e = assert_raises(RuntimeError) { process_secrets }
-      e.message.must_include("Error reading key this/is/very/hidden")
-      e.message.must_include("Error reading key this/is/very/secret")
+      assert_includes e.message, "Error reading key this/is/very/hidden"
+      assert_includes e.message, "Error reading key this/is/very/secret"
     end
 
     describe 'LINK_LOCAL_IP' do
       it 'creates a LINK_LOCAL_IP secret' do
         process_secrets
-        File.read("LINK_LOCAL_IP").must_equal(SecretsClient::LINK_LOCAL_IP)
+        assert_equal SecretsClient::LINK_LOCAL_IP, File.read("LINK_LOCAL_IP")
       end
     end
 
     describe 'CONSUL_URL' do
       it 'creates a CONSUL_URL secret' do
         process_secrets
-        File.read("CONSUL_URL").must_equal("http://#{SecretsClient::LINK_LOCAL_IP}:8500")
+        assert_equal "http://#{SecretsClient::LINK_LOCAL_IP}:8500", File.read("CONSUL_URL")
       end
 
       it 'can be overwritten by the user' do
         File.write('annotations', "secret/CONSUL_URL=\"this/is/very/hidden\"")
         process_secrets
-        File.read('CONSUL_URL').must_equal 'foo'
+        assert_equal 'foo', File.read('CONSUL_URL')
       end
     end
   end
@@ -306,13 +306,13 @@ describe SecretsClient do
 
       process_pki_certs
 
-      File.read("pki/example.com/certificate.pem").must_equal(certificate)
-      File.read("pki/example.com/private_key.pem").must_equal(private_key)
-      File.read("pki/example.com/private_key_type").must_equal(private_key_type)
-      File.read("pki/example.com/issuing_ca.pem").must_equal(issuing_ca)
-      File.read("pki/example.com/ca_chain.pem").must_equal(ca_chain.join("\n"))
-      File.read("pki/example.com/serial_number").must_equal(serial_number)
-      File.read("pki/example.com/expiration").must_equal(expiration)
+      assert_equal certificate, File.read("pki/example.com/certificate.pem")
+      assert_equal private_key, File.read("pki/example.com/private_key.pem")
+      assert_equal private_key_type, File.read("pki/example.com/private_key_type")
+      assert_equal issuing_ca, File.read("pki/example.com/issuing_ca.pem")
+      assert_equal ca_chain.join("\n"), File.read("pki/example.com/ca_chain.pem")
+      assert_equal serial_number, File.read("pki/example.com/serial_number")
+      assert_equal expiration, File.read("pki/example.com/expiration")
     end
 
     it 'does not write ca_chain.pem if response does not contain ca_chain' do
@@ -325,12 +325,12 @@ describe SecretsClient do
 
       refute File.exist? "pki/test.com/ca_chain.pem"
 
-      File.read("pki/test.com/certificate.pem").must_equal(certificate)
-      File.read("pki/test.com/private_key.pem").must_equal(private_key)
-      File.read("pki/test.com/private_key_type").must_equal(private_key_type)
-      File.read("pki/test.com/issuing_ca.pem").must_equal(issuing_ca)
-      File.read("pki/test.com/serial_number").must_equal(serial_number)
-      File.read("pki/test.com/expiration").must_equal(expiration)
+     assert_equal certificate, File.read("pki/test.com/certificate.pem")
+     assert_equal private_key, File.read("pki/test.com/private_key.pem")
+     assert_equal private_key_type, File.read("pki/test.com/private_key_type")
+     assert_equal issuing_ca, File.read("pki/test.com/issuing_ca.pem")
+     assert_equal serial_number, File.read("pki/test.com/serial_number")
+     assert_equal expiration, File.read("pki/test.com/expiration")
     end
 
     it 'does nothing without keys' do
@@ -358,7 +358,7 @@ describe SecretsClient do
         TEXT
 
         process_pki_certs
-        File.read("pki/example.com/serial_number").must_equal(serial_number)
+        assert_equal serial_number, File.read("pki/example.com/serial_number")
       end
 
       it 'works with query param csv' do
@@ -368,7 +368,7 @@ describe SecretsClient do
         TEXT
 
         process_pki_certs
-        File.read("pki/example.com/serial_number").must_equal(serial_number)
+        assert_equal serial_number, File.read("pki/example.com/serial_number")
       end
 
       it 'works with multiple subdirs' do
@@ -378,7 +378,7 @@ describe SecretsClient do
         TEXT
 
         process_pki_certs
-        File.read("pki/test/example.com/serial_number").must_equal(serial_number)
+        assert_equal serial_number, File.read("pki/test/example.com/serial_number")
       end
     end
 
@@ -606,31 +606,33 @@ describe SecretsClient do
 
     it 'reads' do
       request = stub_read.to_return(valid)
-      client.send(:read_from_vault, 'foo').must_equal "bar"
+      assert_equal "bar", client.send(:read_from_vault, 'foo')
       assert_requested request, times: 1
     end
 
     it 'retries on 429' do
       client.expects(:sleep).times(1)
       request = stub_read.to_return({status: 429}, valid)
-      client.send(:read_from_vault, 'foo').must_equal "bar"
+      assert_equal "bar", client.send(:read_from_vault, 'foo')
       assert_requested request, times: 2
     end
 
     it 'does not retry on regular errors' do
       request = stub_read.to_return(status: 500)
-      assert_raises Vault::HTTPServerError do
+      message = assert_raises Vault::HTTPServerError do
         client.send(:read_from_vault, 'foo')
-      end.message.must_match /\AThe Vault server at/
+      end.message
+      assert_match /\AThe Vault server at/, message
       assert_requested request, times: 1
     end
 
     it 'does not retry forever' do
       client.expects(:sleep).times(4)
       request = stub_read.to_return(status: 429)
-      assert_raises Vault::HTTPClientError do
+      message = assert_raises Vault::HTTPClientError do
         client.send(:read_from_vault, 'foo')
-      end.message.must_match /\AError reading key foo\n/
+      end.message
+      assert_match /\AError reading key foo\n/, message
       assert_requested request, times: 5
     end
   end
