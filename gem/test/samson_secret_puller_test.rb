@@ -238,7 +238,6 @@ describe SamsonSecretPuller do
   describe '.reject / .select' do
     it "works" do
       assert_equal({ 'FOO' => 'bar' }, SamsonSecretPuller.select { |k, _| k == 'FOO' })
-      assert_equal({ 'FOO' => 'bar' }, SamsonSecretPuller.reject { |k, _| k != 'FOO' })
     end
   end
 

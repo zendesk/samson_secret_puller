@@ -129,7 +129,9 @@ describe SecretsClient do
     end
 
     it "fails to initialize when serviceaccount_dir is missing" do
-      assert_raises(ArgumentError) { SecretsClient.new(client_options.merge(serviceaccount_dir: "foo", vault_auth_type: "kubernetes")) }
+      assert_raises(ArgumentError) do
+        SecretsClient.new(client_options.merge(serviceaccount_dir: "foo", vault_auth_type: "kubernetes"))
+      end
     end
   end
 
@@ -150,7 +152,7 @@ describe SecretsClient do
       logger.unstub(:debug)
       logger.expects(:debug).with(message: "Authenticated with Vault Server", policies: nil, metadata: nil)
       logger.expects(:debug).with(message: "secrets found", keys: [["SECRET", "this/is/very/hidden"]])
-      logger.expects(:debug).with(message: "PKI found", keys: []) # ["example.com", "pki/issue/example-com?common_name=example.com"]])
+      logger.expects(:debug).with(message: "PKI found", keys: [])
       process_secrets
     end
 
@@ -325,12 +327,12 @@ describe SecretsClient do
 
       refute File.exist? "pki/test.com/ca_chain.pem"
 
-     assert_equal certificate, File.read("pki/test.com/certificate.pem")
-     assert_equal private_key, File.read("pki/test.com/private_key.pem")
-     assert_equal private_key_type, File.read("pki/test.com/private_key_type")
-     assert_equal issuing_ca, File.read("pki/test.com/issuing_ca.pem")
-     assert_equal serial_number, File.read("pki/test.com/serial_number")
-     assert_equal expiration, File.read("pki/test.com/expiration")
+      assert_equal certificate, File.read("pki/test.com/certificate.pem")
+      assert_equal private_key, File.read("pki/test.com/private_key.pem")
+      assert_equal private_key_type, File.read("pki/test.com/private_key_type")
+      assert_equal issuing_ca, File.read("pki/test.com/issuing_ca.pem")
+      assert_equal serial_number, File.read("pki/test.com/serial_number")
+      assert_equal expiration, File.read("pki/test.com/expiration")
     end
 
     it 'does nothing without keys' do
@@ -386,10 +388,18 @@ describe SecretsClient do
       before do
         stub_request(:put, url).
           with { |request| request.body == {common_name: 'fail'}.to_json }.
-          to_return(body: {errors: ["common name fail not allowed by this role"]}.to_json, status: 400, headers: {'Content-Type': 'application/json'})
+          to_return(
+            body: {errors: ["common name fail not allowed by this role"]}.to_json,
+            status: 400,
+            headers: {'Content-Type': 'application/json'}
+          )
 
         stub_request(:put, dne_url).
-          to_return(body: {errors: ["no handler for route 'pki/does/not/exist"]}.to_json, status: 404, headers: {'Content-Type': 'application/json'})
+          to_return(
+            body: {errors: ["no handler for route 'pki/does/not/exist"]}.to_json,
+            status: 404,
+            headers: {'Content-Type': 'application/json'}
+          )
 
         stub_request(:put, +'https://foo.bar:8200/v1/nil').
           to_return(body: {data: nil}.to_json, status: 200, headers: {'Content-Type': 'application/json'})
@@ -456,8 +466,9 @@ describe SecretsClient do
         TEXT
 
         stub_req = stub_request(:put, url).
-          with { |request| request.body == {common_name: 'example.com', ip_sans: '127.0.0.1,10.10.10.10,12.12.12.12'}.to_json }.
-          to_return(body: reply, headers: {'Content-Type': 'application/json'})
+          with do |request|
+            request.body == {common_name: 'example.com', ip_sans: '127.0.0.1,10.10.10.10,12.12.12.12'}.to_json
+          end.to_return(body: reply, headers: {'Content-Type': 'application/json'})
 
         sc = SecretsClient.new(client_options.merge(pod_ip: '127.0.0.1'))
         sc.write_pki_certs
@@ -472,8 +483,9 @@ describe SecretsClient do
         TEXT
 
         stub_req = stub_request(:put, url).
-          with { |request| request.body == {common_name: 'example.com', ip_sans: '127.0.0.1,10.10.10.10,12.12.12.12'}.to_json }.
-          to_return(body: reply, headers: {'Content-Type': 'application/json'})
+          with do |request|
+            request.body == {common_name: 'example.com', ip_sans: '127.0.0.1,10.10.10.10,12.12.12.12'}.to_json
+          end.to_return(body: reply, headers: {'Content-Type': 'application/json'})
 
         sc = SecretsClient.new(client_options.merge(pod_ip: '127.0.0.1'))
         sc.write_pki_certs
