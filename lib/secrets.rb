@@ -27,7 +27,9 @@ class SecretsClient
   )
     raise ArgumentError, "vault address not found" if vault_address.nil?
     raise ArgumentError, "annotations file not found" unless File.exist?(annotations.to_s)
-    raise ArgumentError, "serviceaccount dir #{serviceaccount_dir} not found" if !Dir.exist?(serviceaccount_dir.to_s) && vault_auth_type == "kubernetes"
+    if !Dir.exist?(serviceaccount_dir.to_s) && vault_auth_type == "kubernetes"
+      raise ArgumentError, "serviceaccount dir #{serviceaccount_dir} not found"
+    end
     raise ArgumentError, "api_url is null" if api_url.nil?
 
     @vault_mount = vault_mount
@@ -263,7 +265,11 @@ class SecretsClient
       client.token = secret.auth.client_token
     end
 
-    @logger.debug(message: "Authenticated with Vault Server", policies: auth_data.policies, metadata: auth_data.metadata)
+    @logger.debug(
+      message: "Authenticated with Vault Server",
+      policies: auth_data.policies,
+      metadata: auth_data.metadata
+    )
   end
 
   # splits the given url; returning

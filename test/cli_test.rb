@@ -57,7 +57,7 @@ describe "CLI" do
         POD_HOSTNAME: 'example.com'
       ) do
         sh "#{Bundler.root}/bin/secrets"
-        File.read('BAR').must_equal('foo') # secret was written out
+        assert_equal 'foo', File.read('BAR') # secret was written out
       end
     end
   end
@@ -76,7 +76,7 @@ describe "CLI" do
         POD_HOSTNAME: 'example.com'
       ) do
         sh "#{Bundler.root}/bin/secrets"
-        File.read('BAR').must_equal('foo') # secret was written out
+        assert_equal 'foo', File.read('BAR') # secret was written out
       end
     end
   end

@@ -55,16 +55,16 @@ describe 'CRON' do
 
   it "fails w/o the server listening" do
     with_env(VAULT_PORT: "8201") do
-      create_token("-v http://localhost:9090 -t faketoken -k /etc/password", fail: true).
-        must_include("could not get token for secret puller")
+      assert_includes create_token("-v http://localhost:9090 -t faketoken -k /etc/password", fail: true),
+                      "could not get token for secret puller"
     end
   end
 
   it "fails with missing token" do
-    create_token("-v http://foo.bar:1234", fail: true).must_include("VAULT_TOKEN missing")
+    assert_includes create_token("-v http://foo.bar:1234", fail: true), "VAULT_TOKEN missing"
   end
 
   it "fails with missing vault address" do
-    create_token("-t notatoken", fail: true).must_include("VAULT_ADDR missing")
+    assert_includes create_token("-t notatoken", fail: true), "VAULT_ADDR missing"
   end
 end
