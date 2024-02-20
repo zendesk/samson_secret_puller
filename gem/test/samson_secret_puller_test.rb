@@ -242,6 +242,14 @@ describe SamsonSecretPuller do
     end
   end
 
+  describe '.update' do
+    it "works" do
+      SamsonSecretPuller.values_at('FOO').must_equal(['bar'])
+      SamsonSecretPuller.update({ 'FOO' => 'baz' })
+      SamsonSecretPuller.values_at('FOO').must_equal(['baz'])
+    end
+  end
+
   describe '.replace_ENV!' do
     it "replaces the ENV" do
       silence_warnings { SamsonSecretPuller.const_set(:Object, Class.new) }
