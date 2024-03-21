@@ -48,16 +48,16 @@ describe SecretsClient do
     }
   end
   let(:logger) { Logger.new(STDOUT) }
-  let(:token_client) { SecretsClient.new(client_options) }
+  let(:token_client) { SecretsClient.new(**client_options) }
   let(:serviceaccount_client) do
     client_options[:vault_auth_type] = "kubernetes"
     client_options[:serviceaccount_dir] = Dir.pwd
-    SecretsClient.new(client_options)
+    SecretsClient.new(**client_options)
   end
   let(:client) do
     client_options[:vault_auth_type] = "cert"
     client_options[:vault_authfile_path] = "vaultpem"
-    SecretsClient.new(client_options)
+    SecretsClient.new(**client_options)
   end
   let(:auth_reply) { {auth: {client_token: 'sometoken'}}.to_json }
   let(:token_reply) { { data: {id: 'sometoken'}}.to_json }
@@ -117,19 +117,19 @@ describe SecretsClient do
     end
 
     it "fails to initialize with invalid type" do
-      assert_raises(ArgumentError) { SecretsClient.new(client_options.merge(vault_auth_type: "foobar")) }
+      assert_raises(ArgumentError) { SecretsClient.new(**client_options.merge(vault_auth_type: "foobar")) }
     end
 
     it "fails to initialize without url" do
-      assert_raises(ArgumentError) { SecretsClient.new(client_options.merge(vault_address: nil)) }
+      assert_raises(ArgumentError) { SecretsClient.new(**client_options.merge(vault_address: nil)) }
     end
 
     it "fails to initialize without api_url" do
-      assert_raises(ArgumentError) { SecretsClient.new(client_options.merge(api_url: nil)) }
+      assert_raises(ArgumentError) { SecretsClient.new(**client_options.merge(api_url: nil)) }
     end
 
     it "fails to initialize when serviceaccount_dir is missing" do
-      assert_raises(ArgumentError) { SecretsClient.new(client_options.merge(serviceaccount_dir: "foo", vault_auth_type: "kubernetes")) }
+      assert_raises(ArgumentError) { SecretsClient.new(**client_options.merge(serviceaccount_dir: "foo", vault_auth_type: "kubernetes")) }
     end
   end
 
@@ -443,7 +443,7 @@ describe SecretsClient do
           with { |request| request.body == {common_name: 'example.com', ip_sans: '127.0.0.1'}.to_json }.
           to_return(body: reply, headers: {'Content-Type': 'application/json'})
 
-        sc = SecretsClient.new(client_options.merge(pod_ip: '127.0.0.1'))
+        sc = SecretsClient.new(**client_options.merge(pod_ip: '127.0.0.1'))
         sc.write_pki_certs
 
         assert_requested stub_req
@@ -459,7 +459,7 @@ describe SecretsClient do
           with { |request| request.body == {common_name: 'example.com', ip_sans: '127.0.0.1,10.10.10.10,12.12.12.12'}.to_json }.
           to_return(body: reply, headers: {'Content-Type': 'application/json'})
 
-        sc = SecretsClient.new(client_options.merge(pod_ip: '127.0.0.1'))
+        sc = SecretsClient.new(**client_options.merge(pod_ip: '127.0.0.1'))
         sc.write_pki_certs
 
         assert_requested stub_req
@@ -475,7 +475,7 @@ describe SecretsClient do
           with { |request| request.body == {common_name: 'example.com', ip_sans: '127.0.0.1,10.10.10.10,12.12.12.12'}.to_json }.
           to_return(body: reply, headers: {'Content-Type': 'application/json'})
 
-        sc = SecretsClient.new(client_options.merge(pod_ip: '127.0.0.1'))
+        sc = SecretsClient.new(**client_options.merge(pod_ip: '127.0.0.1'))
         sc.write_pki_certs
 
         assert_requested stub_req
@@ -491,7 +491,7 @@ describe SecretsClient do
           with { |request| request.body == {common_name: 'example.com', ip_sans: '127.0.0.1'}.to_json }.
           to_return(body: reply, headers: {'Content-Type': 'application/json'})
 
-        sc = SecretsClient.new(client_options.merge(pod_ip: '127.0.0.1'))
+        sc = SecretsClient.new(**client_options.merge(pod_ip: '127.0.0.1'))
         sc.write_pki_certs
 
         assert_requested stub_req
@@ -507,7 +507,7 @@ describe SecretsClient do
           with { |request| request.body == {common_name: 'test'}.to_json }.
           to_return(body: reply, headers: {'Content-Type': 'application/json'})
 
-        sc = SecretsClient.new(client_options.merge(pod_hostname: 'test'))
+        sc = SecretsClient.new(**client_options.merge(pod_hostname: 'test'))
         sc.write_pki_certs
 
         assert_requested stub_req
@@ -523,7 +523,7 @@ describe SecretsClient do
           with { |request| request.body == {common_name: 'test'}.to_json }.
           to_return(body: reply, headers: {'Content-Type': 'application/json'})
 
-        sc = SecretsClient.new(client_options.merge(pod_hostname: 'test'))
+        sc = SecretsClient.new(**client_options.merge(pod_hostname: 'test'))
         sc.write_pki_certs
 
         assert_requested stub_req
@@ -539,7 +539,7 @@ describe SecretsClient do
           with { |request| request.body == {common_name: 'example.com', alt_names: 'test'}.to_json }.
           to_return(body: reply, headers: {'Content-Type': 'application/json'})
 
-        sc = SecretsClient.new(client_options.merge(pod_hostname: 'test'))
+        sc = SecretsClient.new(**client_options.merge(pod_hostname: 'test'))
         sc.write_pki_certs
 
         assert_requested stub_req
@@ -555,7 +555,7 @@ describe SecretsClient do
           with { |request| request.body == {common_name: 'example.com', alt_names: 'test,foo.bar,cert.me'}.to_json }.
           to_return(body: reply, headers: {'Content-Type': 'application/json'})
 
-        sc = SecretsClient.new(client_options.merge(pod_hostname: 'test'))
+        sc = SecretsClient.new(**client_options.merge(pod_hostname: 'test'))
         sc.write_pki_certs
 
         assert_requested stub_req
@@ -571,7 +571,7 @@ describe SecretsClient do
           with { |request| request.body == {common_name: 'example.com', alt_names: 'test,foo.bar,cert.me'}.to_json }.
           to_return(body: reply, headers: {'Content-Type': 'application/json'})
 
-        sc = SecretsClient.new(client_options.merge(pod_hostname: 'test'))
+        sc = SecretsClient.new(**client_options.merge(pod_hostname: 'test'))
         sc.write_pki_certs
 
         assert_requested stub_req
@@ -587,7 +587,7 @@ describe SecretsClient do
           with { |request| request.body == {common_name: 'example.com', alt_names: 'test,foo.bar'}.to_json }.
           to_return(body: reply, headers: {'Content-Type': 'application/json'})
 
-        sc = SecretsClient.new(client_options.merge(pod_hostname: 'test'))
+        sc = SecretsClient.new(**client_options.merge(pod_hostname: 'test'))
         sc.write_pki_certs
 
         assert_requested stub_req

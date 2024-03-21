@@ -42,7 +42,7 @@ defmodule SamsonSecretPuller do
     key      = String.to_atom(file)
     contents = "#{folder}/#{file}"
       |> File.read!
-      |> String.strip
+      |> String.trim
 
     Keyword.put(acc, key, contents)
   end

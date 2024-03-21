@@ -1,6 +1,6 @@
-FROM ruby:2.6-alpine3.11
+FROM ruby:3.2-alpine
 
-RUN apk add --update --no-cache bash curl openssl elixir erlang-crypto build-base
+RUN apk add --update --no-cache bash curl openssl elixir build-base
 
 WORKDIR /app
 

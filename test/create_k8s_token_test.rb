@@ -45,8 +45,8 @@ describe 'CRON' do
     end
   end
 
-  def create_token(args, options = {})
-    sh("#{root}/bin/create_k8s_token.sh #{args}", options)
+  def create_token(args, **kwargs)
+    sh("#{root}/bin/create_k8s_token.sh #{args}", **kwargs)
   end
 
   it "can run the cron job" do
