@@ -11,7 +11,7 @@ module SamsonSecretPuller
     extend Forwardable
     [
       :[], :fetch, :keys, :each, :has_key?, :key?, :include?,
-      :each_with_object, :values_at, :reject, :select, :to_a
+      :each_with_object, :values_at, :reject, :select, :to_a, :update
     ].each do |method|
       def_delegator :secrets, method
     end
