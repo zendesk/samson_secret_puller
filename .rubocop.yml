@@ -1,10 +1,42 @@
 AllCops:
-  TargetRubyVersion: 2.4
+  TargetRubyVersion: 2.7
   UseCache: false
+  NewCops: disable
+  SuggestExtensions: false
   Exclude:
     - vendor/**/*
 
 Metrics:
+  Enabled: false
+
+Style/StringConcatenation:
+  Enabled: false
+
+Style/GlobalStdStream:
+  Enabled: false
+
+Style/HashTransformValues:
+  Enabled: false
+
+Style/RedundantBegin:
+  Enabled: false
+
+Layout/LineLength:
+  Enabled: false
+
+Style/HashSyntax:
+  Enabled: false
+
+Lint/SelfAssignment:
+  Enabled: false
+
+Style/RedundantFetchBlock:
+  Enabled: false
+
+Naming/VariableNumber:
+  Enabled: false
+
+Style/RedundantFileExtensionInRequire:
   Enabled: false
 
 Style/StringLiterals:
@@ -37,16 +69,16 @@ Style/StringLiteralsInInterpolation:
 Style/NumericLiterals:
   Enabled: false
 
-Layout/IndentFirstArgument:
+Layout/FirstArgumentIndentation:
   Enabled: false
 
-Layout/IndentFirstHashElement:
+Layout/FirstHashElementIndentation:
   Enabled: false
 
 Layout/EmptyLineAfterGuardClause:
   Enabled: false
 
-Layout/AlignParameters:
+Layout/ParameterAlignment:
   EnforcedStyle: with_fixed_indentation
 
 Layout/MultilineOperationIndentation:
