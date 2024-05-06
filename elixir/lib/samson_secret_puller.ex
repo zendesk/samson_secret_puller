@@ -24,7 +24,7 @@ defmodule SamsonSecretPuller do
 
   ## Examples
 
-      iex> SamsonSecretPuller.fetch_secrets!("./test/doc_secrets")
+      iex> Enum.sort(SamsonSecretPuller.fetch_secrets!("./test/doc_secrets"), :desc)
       [MYSQL_USER: "admin", MYSQL_PASS: "password"]
 
   """
