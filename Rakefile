@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
+require 'bundler/gem_helper'
+Bundler::GemHelper.new('gem').install # overriding base folder so that `rake release` can find the gemspec
+
 require 'yaml'
 
 task default: ["test", "rubocop"] # keep in sync with .github/workflows/actions.yml
