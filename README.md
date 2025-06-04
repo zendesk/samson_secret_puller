@@ -1,4 +1,4 @@
-# Secret puller [![Build Status](https://travis-ci.org/zendesk/samson_secret_puller.svg?branch=master)](https://travis-ci.org/zendesk/samson_secret_puller)
+# Secret puller [![CI](https://github.com/zendesk/samson_secret_puller/actions/workflows/actions.yml/badge.svg?branch=main)](https://github.com/zendesk/samson_secret_puller/actions/workflows/actions.yml)
 
 Application to run in a kubernetes init container,
 to publish secrets to containerized applications without using process environment
