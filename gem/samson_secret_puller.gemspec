@@ -9,7 +9,7 @@ Gem::Specification.new name, SamsonSecretPuller::VERSION do |s|
   s.authors = ["Michael Grosser"]
   s.email = "michael@grosser.it"
   s.homepage = "https://github.com/zendesk/#{name}"
-  s.files = `git ls-files lib MIT-LICENSE.txt`.split("\n")
+  s.files = Dir.glob("lib/**/*") + ['Readme.md', 'MIT-LICENSE.txt']
   s.license = "MIT"
   s.required_ruby_version = '>= 2.7'
 end
