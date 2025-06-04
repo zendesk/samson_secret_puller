@@ -1,4 +1,4 @@
-# Secret puller [![Build Status](https://travis-ci.org/zendesk/samson_secret_puller.svg?branch=master)](https://travis-ci.org/zendesk/samson_secret_puller)
+# Secret puller [![CI](https://github.com/zendesk/samson_secret_puller/actions/workflows/actions.yml/badge.svg?branch=main)](https://github.com/zendesk/samson_secret_puller/actions/workflows/actions.yml)
 
 Application to run in a kubernetes init container,
 to publish secrets to containerized applications without using process environment
@@ -115,6 +115,21 @@ ${SIDECAR_SECRET_PATH}/pki/example.com/expiration
 ### Test
 
 `bundle && bundle exec rake`
+
+### Releasing a new gem version
+A new version is published to RubyGems.org every time a change to `gem/lib/version.rb` is pushed to the `main` branch.
+In short, follow these steps:
+1. Update `version.rb`,
+2. update version in the `Gemfile.lock` file,
+3. merge this change into `main`, and
+4. look at [the action](https://github.com/zendesk/samson_secret_puller/actions/workflows/publish.yml) for output.
+
+To create a pre-release from a non-main branch:
+1. change the version in `version.rb` to something like `1.2.0.pre.1` or `2.0.0.beta.2`,
+2. push this change to your branch,
+3. go to [Actions → “Publish to RubyGems.org” on GitHub](https://github.com/zendesk/samson_secret_puller/actions/workflows/publish.yml),
+4. click the “Run workflow” button,
+5. pick your branch from a dropdown.
 
 ### Release to [Docker Hub](https://hub.docker.com/r/zendesk/samson_secret_puller/)
 

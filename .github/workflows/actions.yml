@@ -1,14 +1,14 @@
 name: CI
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: zendesk/checkout@v2
+    - uses: actions/checkout@v4
     - run: docker build .
     - run: docker build -t secret_tester -f Dockerfile.dev .
     - run: docker run --rm secret_tester bundle exec rake test

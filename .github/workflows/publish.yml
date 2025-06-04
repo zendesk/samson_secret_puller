@@ -1,34 +1,25 @@
-name: Publish Ruby Gem
+name: Publish to RubyGems.org
 
 on:
   push:
-    tags: v*
+    branches: main
+    paths: gem/lib/version.rb
+  workflow_dispatch:
 
 jobs:
   publish:
-    name: Build and publish
-    runs-on: [ubuntu-latest]
+    runs-on: ubuntu-latest
     environment: rubygems-publish
+    if: github.repository_owner == 'zendesk'
+    permissions:
+      id-token: write
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ${{ inputs.ruby_version }}
-      - name: Install oauth
-        run: |
-          sudo apt-get install --fix-broken --yes oathtool
-      - name: Publish to RubyGems
-        run: |
-          cd gem
-          mkdir -p $HOME/.gem
-          touch $HOME/.gem/credentials
-          chmod 0600 $HOME/.gem/credentials
-          printf -- "---\n:rubygems_api_key: ${RUBY_GEMS_API_KEY}\n" > $HOME/.gem/credentials
-          gem build *.gemspec
-          totp=$(oathtool --base32 --totp "${RUBY_GEMS_TOTP_DEVICE}")
-          gem push *.gem --otp "$totp"
-          rm -rf $HOME/.gem/credentials
-        env:
-          RUBY_GEMS_API_KEY: ${{ secrets.RUBY_GEMS_API_KEY }}
-          RUBY_GEMS_TOTP_DEVICE: ${{ secrets.RUBY_GEMS_TOTP_DEVICE }}
+          bundler-cache: false
+      - name: Install dependencies
+        run: bundle install
+      - uses: rubygems/release-gem@v1
