@@ -32,7 +32,7 @@ GEM
     prism (1.4.0)
     public_suffix (6.0.2)
     racc (1.8.1)
-    rack (3.1.13)
+    rack (3.1.14)
     rackup (0.2.3)
       rack (>= 3.0.0.beta1)
       webrick
