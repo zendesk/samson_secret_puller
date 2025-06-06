@@ -3,8 +3,9 @@ FROM ruby:3.2-alpine
 WORKDIR /app
 
 # bundle
+ENV SKIP_DEV_GEMS true
 COPY .ruby-version Gemfile Gemfile.lock ./
-RUN bundle install --quiet --jobs 4 --without test
+RUN bundle install --quiet --jobs 4
 
 # code
 COPY bin /app/bin
