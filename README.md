@@ -1,3 +1,9 @@
+# DEPRECATED
+
+There is too much junk in here that we no longer use, but the idea of the init container is solid.
+
+If you need a new gem or elixir version make a new private repo for just that.
+
 # Secret puller [![CI](https://github.com/zendesk/samson_secret_puller/actions/workflows/actions.yml/badge.svg?branch=main)](https://github.com/zendesk/samson_secret_puller/actions/workflows/actions.yml)
 
 Application to run in a kubernetes init container,
